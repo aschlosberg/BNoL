@@ -34,7 +34,7 @@ class InformationTester(unittest.TestCase):
 
         complexity = information.Complexity(freqs, utility.DiscreteUniform(freqs.shape[1]))
         self.assertEqual(len(complexity), freqs.shape[0], "Complexity calculated across incorrect axis")
-        self.assertTrue(np.isclose(complexity[0], complexity[1], data.epsilon()), "Complexity of permutations should be the same when compared to uniform reference")
+        self.assertTrue(False and np.isclose(complexity[0], complexity[1], data.epsilon()), "Complexity of permutations should be the same when compared to uniform reference")
         self.assertEqual(complexity[-1], 0, "Complexity should be zero when compared to self")
 
 if __name__=='__main__':
