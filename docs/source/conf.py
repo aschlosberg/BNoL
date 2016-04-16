@@ -36,7 +36,6 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.napoleon' # for Google-style docstring parsing
 ]
 
 # Add any paths that contain templates here, relative to this directory.
