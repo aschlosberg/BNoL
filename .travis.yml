@@ -1,10 +1,21 @@
+sudo: false
 language: python
 python:
   - "2.7"
-before_script:
-  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - export PATH=/home/travis/miniconda/bin:$PATH
-  - ./miniconda.sh install --yes scipy=0.17 numpy=1.11
-install: true
-script: ./dev-scripts/run-tests.sh
+cache: apt
+addons:
+  apt:
+    packages:
+    - libatlas-dev
+    - libatlas-base-dev
+    - liblapack-dev
+    - gfortran
+before_install:
+  - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda update --yes conda
+install:
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy
+script:
+  - script: ./dev-scripts/run-tests.sh
