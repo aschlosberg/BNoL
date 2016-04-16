@@ -18,4 +18,4 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy
 script:
-  - script: ${TRAVIS_BUILD_DIR}/dev-scripts/run-tests.sh
+  - ./dev-scripts/run-tests.sh
