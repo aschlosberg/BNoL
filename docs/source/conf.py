@@ -36,7 +36,6 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
     'sphinxcontrib.napoleon' # for Google-style docstring parsing
 ]
 
