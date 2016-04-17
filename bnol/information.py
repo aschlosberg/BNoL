@@ -159,7 +159,7 @@ class Discretize:
     def fit_transform(self, distributions, classes, allFeatures=False):
         """Determine threshold values as if only calling fit(distributions, classes) and return the discretized features.
 
-        .. note::
+        .. tip::
             Use Discretize.includeFeatures attribute to determine which features are included when allFeatures==False.
 
         Args:
