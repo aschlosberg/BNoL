@@ -1,3 +1,5 @@
+"""Data for use in examples and tests."""
+
 import numpy as np
 
 def BerrettaExpression():

@@ -1,3 +1,5 @@
+"""General helper functions used throughout modules but likely of use in other settings."""
+
 import numpy as np
 
 def Normalize(freqs):

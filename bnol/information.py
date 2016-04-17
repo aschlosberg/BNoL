@@ -1,3 +1,5 @@
+"""Information-theoretic measures (e.g. entropy and divergence) and analyses (e.g. Minimum Description Length Principle for feature selection)."""
+
 import numpy as np
 from scipy.stats import entropy
 from . import utility
