@@ -8,16 +8,27 @@ import numpy as np
 
 class FeaturesTester(unittest.TestCase):
 
+    def setUp(self):
+        (self.discrete, self.classes) = data.BerrettaDiscrete()
+
+        featureSet = features.AlphaBetaK(self.discrete, self.classes, specimensAreDiscrete=True)
+        self.pairs = {}
+        self.matrices = {}
+        for v in ['A', 'B']:
+            self.pairs[v] = getattr(featureSet, "_getSpecimenPairs%s" % v)(self.classes)
+            self.matrices[v] = getattr(featureSet, "_matrix%s" % v)(self.discrete, self.classes)
+
+    def tearDown(self):
+        for k in ['discrete', 'classes', 'pairs', 'matrices']:
+            delattr(self, k)
+
     def test_min_feature_set_selection(self):
-        (specimens, classes) = data.BerrettaDiscrete()
+        pass
 
-        featureSet = features.MinFeatureSet(specimens, classes, specimensAreDiscrete=True)
+    def __test_pair_generation(self, AorB, expected):
+        self.assertTrue(np.alltrue(self.pairs[AorB]==expected), "Specimen-pair generation (%s) for does not match the demonstrative pairings in Berretta et al 2007." % AorB)
 
-    def test_min_feature_set_pair_generation(self):
-        (__, classes) = data.BerrettaDiscrete()
-
-        mock = MinFeatureSet() # note that this is NOT features.MinFeatureSet as it is extended to provide access to private methods; must have the same class name to access private methods
-        pairs = mock.getSpecimenPairs(classes)
+    def test_min_feature_set_pair_generation_A(self):
         expected = np.asarray([
             [0,2],
             [0,3],
@@ -26,16 +37,24 @@ class FeaturesTester(unittest.TestCase):
             [1,3],
             [1,4]
         ])
+        self.__test_pair_generation('A', expected)
 
-        self.assertTrue(np.alltrue(pairs==expected), "Specimen-pair generation for min feature set does not match the demonstrative pairings in Berretta et al 2007.")
+    def test_alpha_beta_K_pair_generation_B(self):
+        expected = np.asarray([
+            [0,1],
+            [2,3],
+            [2,4],
+            [3,4]
+        ])
+        self.__test_pair_generation('B', expected)
+
+    def __test_matrix_calculation(self, AorB, expected):
+        matrix = self.matrices[AorB]
+        self.assertEqual(matrix.shape[0], len(self.pairs[AorB]), "Matrix %s should have same number of rows as pairs of different-class features" % AorB)
+        self.assertEqual(matrix.shape[1], self.discrete.shape[1], "Matrix %s should have same number of features as does the first parameter passed (discrete features)" % AorB)
+        self.assertTrue(np.alltrue(matrix==expected), "Matrix %s does not match the demonstrative values in Berretta et al 2007." % AorB)
 
     def test_min_feature_set_matrix_A_calculation(self):
-        (discrete, classes) = data.BerrettaDiscrete()
-
-        mock = MinFeatureSet() # see note in test_min_feature_set_pair_generation
-        pairs = mock.getSpecimenPairs(classes)
-        A = mock.matrixA(discrete, classes)
-
         expected = np.asarray([
             [0,0,0,0,1],
             [0,1,1,1,0],
@@ -44,21 +63,16 @@ class FeaturesTester(unittest.TestCase):
             [1,0,0,1,0],
             [0,0,1,1,0],
         ], dtype='bool')
+        self.__test_matrix_calculation('A', expected)
 
-        self.assertEqual(A.shape[0], len(pairs), "Matrix A for min feature set problem should have same number of rows as pairs of different-class features")
-        self.assertEqual(A.shape[1], discrete.shape[1], "Matrix A for min feature set problem should have same number of features as does the first parameter passed (discrete features)")
-        self.assertTrue(np.alltrue(A==expected), "Matrix A for min feature set problem does not match the demonstrative values in Berretta et al 2007.")
-
-class MinFeatureSet(features.MinFeatureSet):
-    """Provide access to private methods that would benefit from testing because we have well-described expected results."""
-    def __init__(self):
-        pass
-
-    def getSpecimenPairs(self, classes):
-        return self.__getSpecimenPairs(classes)
-
-    def matrixA(self, discrete, classes):
-        return self.__matrixA(discrete, classes)
+    def test_alpha_beta_K_matrix_B_calculation(self):
+        expected = np.asarray([
+            [0,0,0,1,1],
+            [1,0,0,0,0],
+            [0,0,1,0,0],
+            [0,1,0,1,1],
+        ], dtype='bool')
+        self.__test_matrix_calculation('B', expected)
 
 if __name__=='__main__':
     unittest.main()

@@ -28,17 +28,34 @@ class MinFeatureSet(object):
         if not discrete.shape[0]==len(classes):
             raise Exception("Number of specimens does not match number of classes for minmum feature-set selection.")
 
-        self.__matrixA(discrete, classes)
+        self._matrixA(discrete, classes)
 
-    def __getSpecimenPairs(self, classes):
-        grouped = [np.nonzero(classes==g)[0] for g in [False, True]]
+    def _classGroups(self, classes):
+        return [np.nonzero(classes==g)[0] for g in [False, True]]
+
+    def _getSpecimenPairsA(self, classes):
+        grouped = self._classGroups(classes)
         return list(itertools.product(*grouped))
 
-    def __matrixA(self, discrete, classes):
-        pairs = self.__getSpecimenPairs(classes)
-        A = np.empty((len(pairs), discrete.shape[1]), dtype='bool')
-
+    def _matrix(self, discrete, pairs, logical):
+        matrix = np.empty((len(pairs), discrete.shape[1]), dtype='bool')
         for i, (d1, d2) in enumerate(pairs):
-            A[i,:] = np.logical_xor(discrete[d1,:], discrete[d2,:])
+            matrix[i,:] = logical(discrete[d1,:], discrete[d2,:])
+        return matrix
 
-        return A
+    def _matrixA(self, discrete, classes):
+        pairs = self._getSpecimenPairsA(classes)
+        return self._matrix(discrete, pairs, np.logical_xor)
+
+class AlphaBetaK(MinFeatureSet):
+    def _getSpecimenPairsB(self, classes):
+        grouped = self._classGroups(classes)
+        allPairs = np.empty((0,2))
+        for g in grouped:
+            groupPairs = list(map(list, itertools.combinations(g, 2)))
+            allPairs = np.vstack((allPairs, groupPairs))
+        return allPairs.astype('int')
+
+    def _matrixB(self, discrete, classes):
+        pairs = self._getSpecimenPairsB(classes)
+        return self._matrix(discrete, pairs, np.equal)
