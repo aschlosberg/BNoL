@@ -22,11 +22,11 @@ class DataTester(unittest.TestCase):
         self.assertTrue(np.alltrue(first==second), "First and second specimens in Berretta data should be permutations")
 
     def test_sample_data_from_Berretta_2007_feature_set_paper(self):
-        (features, classes) = data.BerrettaDiscrete()
+        (specimens, classes) = data.BerrettaDiscrete()
 
-        self.assertEqual(features.shape, (5,5), "Berretta discrete data should have 5 specimens with 5 features in each")
+        self.assertEqual(specimens.shape, (5,5), "Berretta discrete data should have 5 specimens with 5 features in each")
         self.assertEqual(classes.shape, (5,), "Berretta discrete data classes should have 5 specimens")
-        self.assertEqual(features.dtype, 'bool', "Berretta discrete data should be boolean")
+        self.assertEqual(specimens.dtype, 'bool', "Berretta discrete data should be boolean")
         self.assertEqual(classes.dtype, 'bool', "Berretta discrete data classes should be boolean")
 
 if __name__=='__main__':

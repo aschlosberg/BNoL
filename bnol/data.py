@@ -21,9 +21,9 @@ def BerrettaDiscrete():
     See `Selection of discriminative genes in microarray experiments using mathematical programming <http://test.acs.org.au/__data/assets/pdf_file/0018/15381/JRPIT39.4.287.pdf>`_.
 
     Returns:
-        tuple (numpy.ndarray, numpy.ndarray): [0] boolean; shape (5,5) describing features; [1] boolean; shape (5,) describing classes for each specimen.
+        tuple (numpy.ndarray, numpy.ndarray): [0] boolean; shape (5,5) describing specimens; [1] boolean; shape (5,) describing classes for each specimen.
     """
-    features = np.asarray([
+    specimens = np.asarray([
         [1, 0, 0, 0, 1],
         [0, 1, 1, 0, 1],
         [1, 0, 0, 0, 0],
@@ -33,7 +33,7 @@ def BerrettaDiscrete():
 
     classes = np.asarray([0,0,1,1,1], dtype='bool')
 
-    return (features, classes)
+    return (specimens, classes)
 
 def epsilon():
     """Epsilon value for use in testing as the tolerance in numpy.isclose().
