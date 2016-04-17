@@ -7,4 +7,5 @@ DIR=`dirname ${FULLPATH}`
 
 pyclean ${DIR}/../
 
-exit `python -m unittest discover ${DIR}/../tests "*.py" -v`
+python -m unittest discover ${DIR}/../tests "*.py" -v
+exit $?
