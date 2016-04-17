@@ -15,6 +15,26 @@ def BerrettaExpression():
     """
     return np.asarray([[4,3,2,1,0.1],[0.1,1,2,3,4],[5,2,5,1,3],[2,2,2,2,2]])
 
+def BerrettaDiscrete():
+    """Examples discrete boolean features.
+
+    See `Selection of discriminative genes in microarray experiments using mathematical programming <http://test.acs.org.au/__data/assets/pdf_file/0018/15381/JRPIT39.4.287.pdf>`_.
+
+    Returns:
+        tuple (numpy.ndarray, numpy.ndarray): [0] boolean; shape (5,5) describing features; [1] boolean; shape (5,) describing classes for each specimen.
+    """
+    features = np.asarray([
+        [1, 0, 0, 0, 1],
+        [0, 1, 1, 0, 1],
+        [1, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1],
+        [0, 1, 0, 1, 1]
+    ], dtype='bool')
+
+    classes = np.asarray([0,0,1,1,1], dtype='bool')
+
+    return (features, classes)
+
 def epsilon():
     """Epsilon value for use in testing as the tolerance in numpy.isclose().
 
