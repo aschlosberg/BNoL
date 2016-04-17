@@ -4,35 +4,36 @@ from . import utility
 
 def Entropy(distributions):
     """Calculate information entropy (in bits) for a set of distributions.
-    Wrapper for scipy.stats.entropy(distributions.T) with base = 2.
+    Wrapper for scipy.stats.entropy(distributions.T) with base=2.
 
     Args:
-        distributions (numpy.darray): shape (n,p) representing relative frequencies of the p features across n specimens
+        distributions (numpy.darray): shape (n,p) representing relative frequencies of the p features across n specimens.
 
     Returns:
-        numpy.darray(): n information entropy values, one for each specimen
+        numpy.darray(): n information entropy values, one for each specimen.
     """
 
     return entropy(np.asarray(distributions).T, base=2)
 
 class Divergence(object):
     """Calculate different divergence measures, D(P||Q), to describe the 'statistical distance' between a set of probability distributions and a reference.
-    Utilises scipy.stats.entropy under the hood but can accept multiple values for Q simultaneously.
-    [See Wikipedia: Statistical distance](https://en.wikipedia.org/wiki/Statistical_distance) as well as links in individual measures.
+
+    Utilises scipy.stats.entropy() under the hood but can accept multiple values for Q simultaneously.
+
+    See `Wikipedia: Statistical distance <https://en.wikipedia.org/wiki/Statistical_distance>`_ as well as links in individual measures.
+
+    Args:
+        P (Optional[numpy.darray]): shape (1,p) defining a reference sequence against which divergence is calculated. If not provided then a p-dimensional discrete uniform is used.
+        Qs (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens. NOTE: Although it has a default value of None, this is not optional (the ordering of P and Qs parameters is a sane choice given scipy.stats.entropy and this requires that Qs have a default if P does).
+
+    Raises:
+        Exception: If no value is provided for Qs.
+        Exception: If P is provided and it has a different number of features to Qs (i.e. not P.shape[1]==Qs.shape[1]).
+        Exception: If P is provided and it contains more than one reference (i.e. P.shape[0]>1).
     """
 
     def __init__(self, P=None, Qs=None):
-        """Perform sanity checks on the sizes of the distributions of P and Q.
-
-        Args:
-            P (Optional[numpy.darray]): shape (1,p) defining a reference sequence against which divergence is calculated. If not provided then a p-dimensional discrete uniform is used.
-            Qs (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens. NOTE: Although it has a default value of None, this is not optional (the ordering of P and Qs parameters is a sane choice given scipy.stats.entropy and this requires that Qs have a default if P does).
-
-        Raises:
-            Exception: If no value is provided for Qs.
-            Exception: If P is provided and it has a different number of features to Qs (i.e. not P.shape[1]==Qs.shape[1]).
-            Exception: If P is provided and it contains more than one reference (i.e. P.shape[0]>1).
-        """
+        """Perform sanity checks on the sizes of the distributions of P and Q."""
         if Qs is None:
             raise Exception("No default value is possible for Qs when calculating divergence")
 
@@ -53,8 +54,10 @@ class Divergence(object):
 
     def KL(self):
         """Return the Kullback-Leibler divergence (in bits).
-        Note that this is not symmetrical.
-        [See Wikipedia: Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence)
+
+        *Note that this is not symmetrical.*
+
+        See `Wikipedia: Kullback-Leibler divergence <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
 
         Returns:
             numpy.darray: n divergence values, one for each specimen.
@@ -63,12 +66,17 @@ class Divergence(object):
 
     def JS(self):
         """Return the Jensen-Shannon divergence (in bits).
-        Unlike Kullback-Leibler divergence (KLD), this is symmetrical. The square-root of the value is also a metric so it will satisfy the triangle inequality.
-        [See Wikipedia: Jensen-Shannon divergence](https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence)
 
-        if KLD = D(P||Q);
-        and M = (P+Q) / 2;
-        then JSD(P||Q) = (D(P||M) + D(Q||M)) / 2
+        Unlike Kullback-Leibler divergence (KLD), this is symmetrical. The square-root of the value is also a metric so it will satisfy the triangle inequality.
+
+        See `Wikipedia: Jensen-Shannon divergence <https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence>`_.
+
+        Example:
+            JSD is calculated from KLD as follows::
+
+                let KLD = D(P||Q);
+                let M = (P+Q) / 2;
+                JSD(P||Q) = (D(P||M) + D(Q||M)) / 2
 
         Returns:
             numpy.darray: n divergence values, one for each specimen.
@@ -80,7 +88,8 @@ class Divergence(object):
 
 def Complexity(distributions, reference=None):
     """For each of a group of n specimens, return the specimen entropy multiplied by the Jensen-Shannon divergence (each in bits).
-    [See Berretta et al. Cancer biomarker discovery: The entropic hallmark](https://dx.doi.org/10.1371/journal.pone.0012262)
+
+    See `Berretta et al. Cancer biomarker discovery: The entropic hallmark <https://dx.doi.org/10.1371/journal.pone.0012262>`_.
 
     Args:
         distributions (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens.

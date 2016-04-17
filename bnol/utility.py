@@ -31,8 +31,8 @@ def DiscreteUniform(p):
     return np.ones((1,p))/p;
 
 def VectorToMatrix(vec):
-    """Most BNoL functions are developed to work on matrices such that each row represents a specimen.
-    In some cases we may wish to pass a single specimen that is defined as a one-dimensional numpy.darray and this will cause problems if darray.shape[1] is utilised.
+    """Most BNoL functions are developed to work on matrices such that each row represents a specimen. In some cases we may wish to pass a single specimen that is defined as a one-dimensional numpy.darray and this will cause problems if darray.shape[1] is utilised.
+
     Expand dimensions for such vectors such that they have shape (1,p) instead of (p,). Leave matrices unchanged.
 
     Args:
