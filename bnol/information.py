@@ -191,8 +191,7 @@ class Discretize:
 
         for threshold in sorted(feature)[:-1]: # therefore MUST use > in splitting and not >=
             """
-            This is worst-case O(n) but I think there may be an O(log(n)) solution where n is the number of specimens.
-            The problem with a binary search, however, is that we don't know which way to go to decrease entropy.
+            This is O(n). Can we find it faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
             """
             separation = self.__getSeparation(feature, threshold)
 
@@ -208,8 +207,7 @@ class Discretize:
                 minEntropy = thresholdEntropy
                 bestThreshold = threshold
                 bestSeparationEntropies = [Ent1, Ent2]
-            else:
-                break
+            # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
         bestSeparation = self.__getSeparation(feature, bestThreshold)
         delta = self.__deltaMDLP(i, feature, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
