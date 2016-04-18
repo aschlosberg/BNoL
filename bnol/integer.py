@@ -1,3 +1,5 @@
+"""Integer-programming methods for finding reduced feature sets following discretization."""
+
 import numpy as np
 from . import information, utility
 import itertools

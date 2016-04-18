@@ -2,16 +2,16 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-from bnol import features, data
+from bnol import integer, data
 import unittest
 import numpy as np
 
-class FeaturesTester(unittest.TestCase):
+class IntegerProgrammingTester(unittest.TestCase):
 
     def setUp(self):
         (self.discrete, self.classes) = data.BerrettaDiscrete()
 
-        featureSet = features.AlphaBetaK(self.discrete, self.classes, specimensAreDiscrete=True)
+        featureSet = integer.AlphaBetaK(self.discrete, self.classes, specimensAreDiscrete=True)
         self.pairs = {}
         self.matrices = {}
         for v in ['A', 'B']:
