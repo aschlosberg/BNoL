@@ -1,6 +1,6 @@
 """Integer-programming methods for finding reduced feature sets following discretization."""
 
-import numpy as np
+import numpy as np, numpy.ma as ma
 from . import information, utility
 import itertools
 
@@ -30,7 +30,42 @@ class MinFeatureSet(object):
         if not discrete.shape[0]==len(classes):
             raise Exception("Number of specimens does not match number of classes for minmum feature-set selection.")
 
-        self._matrixA(discrete, classes)
+        self._discrete = discrete
+        self._classes = classes
+        self._reduce()
+
+    def _reduce(self):
+        rawA = self._matrixA(self._discrete, self._classes)
+        A = ma.masked_array(rawA, np.zeros(rawA.shape))
+
+        # R0
+        featureCoveragePerPair = self._featureCoveragePerPair(A)
+        if np.any(featureCoveragePerPair==0):
+            raise InfeasibleInstanceException("Feature reduction infeasible by this method. See Berretta et al (2007); can not reduce discrete feature set as Min FEATURE Reduction R0 was not met.")
+
+        self._R1(A)
+
+    def _featureCoveragePerPair(self, A):
+        coverage = np.sum(A, axis=1)
+        assert A.shape[0]==len(coverage), "Matrix A summed across incorrect axis for determining feature coverage per pair"
+        return coverage
+
+    def _R1(self, A):
+        featureCoveragePerPair = self._featureCoveragePerPair(A)
+        indicesOfSingleFeaturePairs = np.nonzero(featureCoveragePerPair==1)[0]
+        valuesOfSingleFeaturePairs = A[indicesOfSingleFeaturePairs,:]
+        doesEachFeatureCoverSingletons = np.any(valuesOfSingleFeaturePairs, axis=0)
+        assert doesEachFeatureCoverSingletons.shape==(len(self._classes),), "Features covering singly-covered pairs were calculated across the wrong axis for Min FEATURE Reduction R1"
+        indicesOfFeaturesCoveringSingletons = np.nonzero(doesEachFeatureCoverSingletons)[0]
+
+        if len(indicesOfFeaturesCoveringSingletons):
+            canEachPairBeDeleted = np.any(A[:,indicesOfFeaturesCoveringSingletons], axis=1)
+            assert canEachPairBeDeleted.shape==(A.shape[0],), "Pairs for deletion due to Min FEATURE Reduction R1 were calculated across the wrong axis"
+            A.mask[canEachPairBeDeleted,:] = True
+        else:
+            canEachPairBeDeleted = ma.masked_array(np.zeros(A.mask.shape[0], dtype='bool'), np.any(A.mask, axis=1))
+
+        return canEachPairBeDeleted
 
     def _classGroups(self, classes):
         return [np.nonzero(classes==g)[0] for g in [False, True]]
@@ -61,3 +96,6 @@ class AlphaBetaK(MinFeatureSet):
     def _matrixB(self, discrete, classes):
         pairs = self._getSpecimenPairsB(classes)
         return self._matrix(discrete, pairs, np.equal)
+
+class InfeasibleInstanceException(Exception):
+    pass
