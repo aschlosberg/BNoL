@@ -6,9 +6,5 @@ setup(
     author='Arran Schlosberg',
     author_email='me@arranschlosberg.com',
     license='MIT',
-    packages=['bnol'],
-    install_requires=[
-        'numpy',
-        'scipy',
-    ]
+    packages=['bnol']
 )
