@@ -37,20 +37,21 @@ class MinFeatureSet(object):
     def _reduce(self):
         rawA = self._matrixA(self._discrete, self._classes)
         A = ma.masked_array(rawA, np.zeros(rawA.shape))
+        x = ma.masked_array(np.empty(rawA.shape[1], dtype='bool'), np.ones(rawA.shape[1], dtype='bool')) # track which features are to be in-/excluded; mask them until such time as we have a definitive answer
 
         # R0
         featureCoveragePerPair = self._featureCoveragePerPair(A)
         if np.any(featureCoveragePerPair==0):
             raise InfeasibleInstanceException("Feature reduction infeasible by this method. See Berretta et al (2007); can not reduce discrete feature set as Min FEATURE Reduction R0 was not met.")
 
-        self._R1(A)
+        self._R1(A, x)
 
     def _featureCoveragePerPair(self, A):
         coverage = np.sum(A, axis=1)
         assert A.shape[0]==len(coverage), "Matrix A summed across incorrect axis for determining feature coverage per pair"
         return coverage
 
-    def _R1(self, A):
+    def _R1(self, A, x):
         featureCoveragePerPair = self._featureCoveragePerPair(A)
         indicesOfSingleFeaturePairs = np.nonzero(featureCoveragePerPair==1)[0]
         valuesOfSingleFeaturePairs = A[indicesOfSingleFeaturePairs,:]
@@ -59,6 +60,8 @@ class MinFeatureSet(object):
         indicesOfFeaturesCoveringSingletons = np.nonzero(doesEachFeatureCoverSingletons)[0]
 
         if len(indicesOfFeaturesCoveringSingletons):
+            x.mask[indicesOfFeaturesCoveringSingletons] = False
+            x[indicesOfFeaturesCoveringSingletons] = True
             canEachPairBeDeleted = np.any(A[:,indicesOfFeaturesCoveringSingletons], axis=1)
             assert canEachPairBeDeleted.shape==(A.shape[0],), "Pairs for deletion due to Min FEATURE Reduction R1 were calculated across the wrong axis"
             A.mask[canEachPairBeDeleted,:] = True
