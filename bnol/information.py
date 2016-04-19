@@ -214,13 +214,13 @@ class Discretize:
             # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
         bestSeparation = self._getSeparation(feature, bestThreshold)
-        delta = self._deltaMDLP(i, feature, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
+        delta = self._deltaMDLP(bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
         mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
         gain = self.baseEntropy - minEntropy
 
         return (gain>mdlpCriterion, bestThreshold, bestSeparation)
 
-    def _deltaMDLP(self, i, feature, bestSeparation, bestSeparationEntropies):
+    def _deltaMDLP(self, bestSeparation, bestSeparationEntropies):
         """Calculate the delta value for a particular feature, as defined in Fayyad and Irani paper for calculating MDLP criterion."""
         assert bestSeparation.dtype=='bool', "Expecting boolean class values when calculating delta value."
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."
