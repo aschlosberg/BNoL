@@ -120,9 +120,11 @@ class Discretize:
 
     Attributes:
         baseEntropy (float): class entropy for the whole set of specimens.
-        bestThresholds (numpy.darray): float; shape(n,) optimal, entropy-minimising, threshold for each of the n features.
+        bestThresholds (numpy.darray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
         discretizedFeatures (numpy.darray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
         includeFeatures (numpy.darray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
+        gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for each feature
+        mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for inclusion of each feature
     """
     def __init__(self):
         pass
@@ -146,7 +148,7 @@ class Discretize:
 
         featureDecisions = map(self._processFeature, range(distributions.shape[1])) # use a map so it can later be parallelised
         decisionTuples = zip(*featureDecisions)
-        (self.includeFeatures, self.bestThresholds, self.discretizedFeatures) = map(lambda t: np.asarray(t).T, decisionTuples)
+        (self.includeFeatures, self.bestThresholds, self.discretizedFeatures, self.gains, self.mdlpCriteria) = map(lambda t: np.asarray(t).T, decisionTuples)
 
     def transform(self, distributions, allFeatures=False):
         """Not yet implemented.
@@ -214,13 +216,13 @@ class Discretize:
             # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
         bestSeparation = self._getSeparation(feature, bestThreshold)
-        delta = self._deltaMDLP(i, feature, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
+        delta = self._deltaMDLP(bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
         mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
         gain = self.baseEntropy - minEntropy
 
-        return (gain>mdlpCriterion, bestThreshold, bestSeparation)
+        return (gain>mdlpCriterion, bestThreshold, bestSeparation, gain, mdlpCriterion)
 
-    def _deltaMDLP(self, i, feature, bestSeparation, bestSeparationEntropies):
+    def _deltaMDLP(self, bestSeparation, bestSeparationEntropies):
         """Calculate the delta value for a particular feature, as defined in Fayyad and Irani paper for calculating MDLP criterion."""
         assert bestSeparation.dtype=='bool', "Expecting boolean class values when calculating delta value."
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."

@@ -47,6 +47,7 @@ class InformationTester(unittest.TestCase):
         self.assertTrue(np.alltrue(D._getSeparation(np.arange(1,6), 3)==[False, False, False, True, True]), "Discretization does not properly threshold feature values. MUST be > and not >=.")
         self.assertEqual(D.includeFeatures.dtype, 'bool', "Feature-inclusion array dtype incorrectly defined for discretization by MDLP")
         self.assertEqual(D.includeFeatures.shape, (nFeatures,), "Feature-inclusion array shape incorrectly defined for discretization by MDLP")
+        self.assertTrue(np.alltrue(D.includeFeatures==(D.gains>D.mdlpCriteria)), "Feature-inclusion array does not match that determined by comparing gains array to MDLP criteria array")
         self.assertEqual(D.bestThresholds.dtype, 'float', "Threshold array dtype incorrectly defined for discretization by MDLP")
         self.assertEqual(D.bestThresholds.shape, (nFeatures,), "Threshold array properties shape incorrectly defined for discretization by MDLP")
         self.assertEqual(D.discretizedFeatures.dtype, 'bool', "Discretized-features array dtype incorrectly defined for discretization by MDLP")
@@ -61,6 +62,54 @@ class InformationTester(unittest.TestCase):
             [0, 1, 0, 1, 1]
         ], dtype='bool')
         self.assertTrue(np.alltrue(D.discretizedFeatures==discretized), "Discretized features are incorrect for Berretta data.")
+
+    def test_mdlp_criterion_for_discretization(self):
+        """Series of test tuples::
+            (
+                boolean-flag list indicating if each of the features is above threshold,
+                2D list of specimen classes for each of the two separations defined by the above flags,
+                list of expected entropy values of each of above list,
+                expected delta value for MDLP criterion
+            )
+        """
+
+        D = information.Discretize()
+        classes = np.asarray([1,0,0,1,1], dtype='bool')
+        D.fit(np.random.random_sample((5,6)), classes)
+
+        ents = np.zeros((5,5))
+        for i in range(1,5):
+            for j in range(1,5):
+                ents[i,j] = information.Entropy([i,j])
+
+        c = np.log2(6) - 2*ents[2,3] # constant value for all deltas
+        tests = [
+            ([0,1,1,1,1], [[0,0,1,1],[1]], [ents[2,2], ents[1,0]], c + 2*ents[2,2] + 1*ents[1,0]),
+            ([1,0,1,1,1], [[1,0,1,1],[0]], [ents[3,1], ents[0,1]], c + 2*ents[3,1] + 1*ents[0,1]),
+            ([1,1,0,1,1], [[1,0,1,1],[0]], [ents[3,1], ents[0,1]], c + 2*ents[3,1] + 1*ents[0,1]),
+            ([1,1,1,0,1], [[1,0,0,1],[1]], [ents[2,2], ents[1,0]], c + 2*ents[2,2] + 1*ents[1,0]),
+            ([1,1,1,1,0], [[1,0,0,1],[1]], [ents[2,2], ents[1,0]], c + 2*ents[2,2] + 1*ents[1,0]),
+            ([0,0,1,1,1], [[0,1,1],[1,0]], [ents[2,1], ents[1,1]], c + 2*ents[1,2] + 2*ents[1,1]),
+            ([0,1,0,1,1], [[0,1,1],[1,0]], [ents[2,1], ents[1,1]], c + 2*ents[2,1] + 2*ents[1,1]),
+            ([0,1,1,0,1], [[0,0,1],[1,1]], [ents[1,2], ents[2,0]], c + 2*ents[1,2] + 1*ents[2,0]),
+            ([0,1,1,1,0], [[0,0,1],[1,1]], [ents[1,2], ents[2,0]], c + 2*ents[1,2] + 2*ents[2,0]),
+            ([1,0,0,1,1], [[1,1,1],[0,0]], [ents[3,0], ents[0,2]], c + 1*ents[3,0] + 1*ents[0,2]),
+            ([1,0,1,0,1], [[1,0,1],[0,1]], [ents[2,1], ents[1,1]], c + 2*ents[2,1] + 2*ents[1,1]),
+            ([1,0,1,1,0], [[1,0,1],[0,1]], [ents[2,1], ents[1,1]], c + 2*ents[2,1] + 2*ents[1,1]),
+            ([1,1,0,0,1], [[1,0,1],[0,1]], [ents[2,1], ents[1,1]], c + 2*ents[2,1] + 2*ents[1,1]),
+            ([1,1,0,1,0], [[1,0,1],[0,1]], [ents[2,1], ents[1,1]], c + 2*ents[2,1] + 2*ents[1,1]),
+            ([1,1,1,0,0], [[1,0,0],[1,1]], [ents[1,2], ents[2,0]], c + 2*ents[1,2] + 1*ents[2,0]),
+        ]
+
+        for i, t in enumerate(tests):
+            above = np.asarray(t[0], dtype='bool')
+            separations = [classes[a] for a in [above, ~above]]
+            entropies = [D._specimenClassEntropy(s) for s in separations]
+
+            for j in range(2):
+                self.assertTrue(np.alltrue(separations[j]==t[1][j]), "Separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
+                self.assertTrue(np.isclose(entropies[j], t[2][j], data.epsilon()), "Entropies of separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
+            self.assertTrue(np.isclose(t[3], D._deltaMDLP(above, entropies), data.epsilon()), "Incorrect delta value for MDLP criterion; test [%d] %s" % (i, t[0]))
 
 if __name__=='__main__':
     unittest.main()
