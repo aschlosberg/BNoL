@@ -8,40 +8,45 @@ BNoL
 
 `Source code available on GitHub <https://github.com/aschlosberg/BNoL>`_
 
-|TravisBuildStatus|_
-
 .. |TravisBuildStatus| image:: https://travis-ci.org/aschlosberg/BNoL.svg?branch=master
     :alt: Build Status
 .. _TravisBuildStatus: https://travis-ci.org/aschlosberg/BNoL
 
-BNoL (*pron. bee-noll*) is a Python library for discrete feature selection with a primary focus on transcriptomic (gene-expression) analysis which has a need for discovery of specific features (biomarkers) rather than weighted combinations as in feature extraction methods such as PCA.
+BNoL (*pron. bee-noll*) is a Python library for discrete feature selection with a primary focus on transcriptomic (gene-expression) analysis. Within transcriptomics there is a need for discovery of specific features (biomarkers) rather than weighted combinations as can be found through feature extraction methods such as PCA.
 
 Although documented and tested, the code is very much in its infancy and function interfaces are open to change. Unit tests are currently focussed on sanity (e.g. dimensions of matrices / vectors) and very simple hand-worked expected results.
 
 BNoL stands for *Bare Necessities of Life*, inspired by the line in the Jungle Book song: "Old Mother Nature's recipes; that bring the bare necessities of life".
-
-Modules
--------
 
 .. toctree::
    :maxdepth: 2
 
    bnol
 
+Compatibility
+-------------
+
+Continuous integration is performed against the following versions of Python (`See BNoL testing results <https://travis-ci.org/aschlosberg/BNoL>`_):
+
+- 2.7
+- 3.3
+- 3.4
+- 3.5
+
 Acknowledgements
 ----------------
 
 This work was made possible by funding from, in alphabetical order:
 
-* Cambridge Trust
+* `Cambridge Trust <https://www.cambridgetrust.org/>`_
 
   - Cambridge Trust Scholarship
 
-* The Royal College of Pathologists of Australasia
+* `The Royal College of Pathologists of Australasia <https://www.rcpa.edu.au/About/RCPA-Foundation/Grants-and-Awards>`_
 
   - RCPA Foundation Mike and Carole Ralston Travelling Fellowship
 
-* The University of Sydney Travelling Scholarships
+* `The University of Sydney Travelling Scholarships <https://sydney.edu.au/scholarships/research/travelling_scholarships_main.shtml#travel>`_
 
   - Charles Gilbert Heydon Travelling Fellowship in Biological Sciences
   - Eleanor Sophia Wood Postgraduate Research Travelling Scholarship
