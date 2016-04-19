@@ -1,9 +1,6 @@
 bnol package
 ============
 
-Submodules
-----------
-
 bnol.data module
 ----------------
 
@@ -24,15 +21,6 @@ bnol.utility module
 -------------------
 
 .. automodule:: bnol.utility
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: bnol
     :members:
     :undoc-members:
     :show-inheritance:
