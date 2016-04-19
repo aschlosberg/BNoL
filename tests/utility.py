@@ -27,7 +27,8 @@ class UtilityTester(unittest.TestCase):
             self.assertTrue(np.isclose(np.sum(distribution), 1, data.epsilon()), "Uniform distribution not normalized; values do not sum to one for n=%d" %n)
 
     def test_expand_vector_to_two_dimensions(self):
-        oneDimensional = np.empty((10,))
+        np.random.seed(42)
+        oneDimensional = np.random.random_sample((10,))
         twoDimensional = utility.VectorToMatrix(oneDimensional)
 
         self.assertEqual(oneDimensional.shape, (10,), "One-dimensional vector does not have correct number of dimensions")
@@ -35,7 +36,8 @@ class UtilityTester(unittest.TestCase):
         self.assertTrue(np.alltrue(oneDimensional==twoDimensional[0]), "Values of two-dimensional vector do not match originals")
 
     def test_do_not_expand_matrix_if_thought_to_be_vector(self):
-        matrix = np.empty((10, 20))
+        np.random.seed(42)
+        matrix = np.random.random_sample((10, 20))
         matrixCopy = utility.VectorToMatrix(matrix)
 
         self.assertEqual(matrix.shape, matrixCopy.shape, "Shape of matrix changed")
