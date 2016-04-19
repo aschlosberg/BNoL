@@ -123,8 +123,8 @@ class Discretize:
         bestThresholds (numpy.darray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
         discretizedFeatures (numpy.darray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
         includeFeatures (numpy.darray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
-        gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for this feature
-        mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for feature inclusion
+        gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for each feature
+        mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for inclusion of each feature
     """
     def __init__(self):
         pass
