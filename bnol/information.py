@@ -188,31 +188,35 @@ class Discretize:
         minEntropy = self.baseEntropy
         bestThreshold = None
         bestSeparationEntropies = None
+        thresholds = sorted(np.unique(feature))
 
-        for threshold in sorted(feature)[:-1]: # therefore MUST use > in splitting and not >=
+        for i, threshold in enumerate(thresholds[:-1]): # therefore MUST use > in splitting and not >=
             """
             This is O(n). Can we find it faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
             """
             separation = self.__getSeparation(feature, threshold)
 
-            n1 = np.count_nonzero(separation)
-            Ent1 = self.__specimenClassEntropy(self.booleanClasses[separation])
+            n = [None]*2
+            Ent = [None]*2
 
-            n2 = nSamples - n1
-            Ent2 = self.__specimenClassEntropy(self.booleanClasses[~separation])
+            n[0] = np.count_nonzero(separation)
+            Ent[0] = self.__specimenClassEntropy(self.booleanClasses[separation])
 
-            thresholdEntropy = (n1 * Ent1 + n2 * Ent2) / nSamples
+            n[1] = nSamples - n[0]
+            Ent[1] = self.__specimenClassEntropy(self.booleanClasses[~separation])
+
+            thresholdEntropy = np.dot(n, Ent) / nSamples
 
             if thresholdEntropy<minEntropy:
                 minEntropy = thresholdEntropy
-                bestThreshold = threshold
-                bestSeparationEntropies = [Ent1, Ent2]
+                bestThreshold = (thresholds[i] + thresholds[i+1])/2 # note that we only enumerate up to thresholds[-1]
+                bestSeparationEntropies = Ent[:]
             # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
         bestSeparation = self.__getSeparation(feature, bestThreshold)
         delta = self.__deltaMDLP(i, feature, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
         mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
-        gain = self.baseEntropy- minEntropy
+        gain = self.baseEntropy - minEntropy
 
         return (gain>mdlpCriterion, bestThreshold, bestSeparation)
 

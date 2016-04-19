@@ -53,5 +53,11 @@ class InformationTester(unittest.TestCase):
 
         self.assertTrue(np.alltrue(mdlpCriterionMet==D.discretizedFeatures[:,D.includeFeatures]), "Features returned by Discretize.fit_transform() do not match those chosen explicitly with Discretize.includeFeatures")
 
+        self.assertTrue(np.alltrue(D.bestThresholds==[3.0, 1.5, 3.5, 1.5, 1.05]), "Optimal thresholds returned by Discretize.fit() are incorrect for Berretta data.")
+        # [4.0, 3.0, 2.0, 1.0, 0.1],
+        # [0.1, 1.0, 2.0, 3.0, 4.0],
+        # [5.0, 2.0, 5.0, 1.0, 3.0],
+        # [2.0, 2.0, 2.0, 2.0, 2.0]
+
 if __name__=='__main__':
     unittest.main()
