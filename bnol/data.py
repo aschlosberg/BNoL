@@ -13,7 +13,12 @@ def BerrettaExpression():
     Returns:
         numpy.ndarray: shape (4,5)
     """
-    return np.asarray([[4,3,2,1,0.1],[0.1,1,2,3,4],[5,2,5,1,3],[2,2,2,2,2]])
+    return np.asarray([
+        [4.0, 3.0, 2.0, 1.0, 0.1],
+        [0.1, 1.0, 2.0, 3.0, 4.0],
+        [5.0, 2.0, 5.0, 1.0, 3.0],
+        [2.0, 2.0, 2.0, 2.0, 2.0]
+    ])
 
 def epsilon():
     """Epsilon value for use in testing as the tolerance in numpy.isclose().
