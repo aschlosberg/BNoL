@@ -141,10 +141,10 @@ class Discretize:
             raise Exception("Number of class indicators for descritization must equal number of samples provided.")
 
         self.booleanClasses = classes.astype('bool')
-        self.baseEntropy = self.__specimenClassEntropy(self.booleanClasses)
+        self.baseEntropy = self._specimenClassEntropy(self.booleanClasses)
         self.distributions = distributions
 
-        featureDecisions = map(self.__processFeature, range(distributions.shape[1])) # use a map so it can later be parallelised
+        featureDecisions = map(self._processFeature, range(distributions.shape[1])) # use a map so it can later be parallelised
         decisionTuples = zip(*featureDecisions)
         (self.includeFeatures, self.bestThresholds, self.discretizedFeatures) = map(lambda t: np.asarray(t).T, decisionTuples)
 
@@ -173,7 +173,7 @@ class Discretize:
         self.fit(distributions, classes)
         return self.discretizedFeatures if allFeatures else self.discretizedFeatures[:,self.includeFeatures]
 
-    def __processFeature(self, i):
+    def _processFeature(self, i):
         """Determine threshold value for a single feature and decide if the MDLP criterion is met.
 
         Args:
@@ -194,16 +194,16 @@ class Discretize:
             """
             This is O(n). Can we find it faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
             """
-            separation = self.__getSeparation(feature, threshold)
+            separation = self._getSeparation(feature, threshold)
 
             n = [None]*2
             Ent = [None]*2
 
             n[0] = np.count_nonzero(separation)
-            Ent[0] = self.__specimenClassEntropy(self.booleanClasses[separation])
+            Ent[0] = self._specimenClassEntropy(self.booleanClasses[separation])
 
             n[1] = nSamples - n[0]
-            Ent[1] = self.__specimenClassEntropy(self.booleanClasses[~separation])
+            Ent[1] = self._specimenClassEntropy(self.booleanClasses[~separation])
 
             thresholdEntropy = np.dot(n, Ent) / nSamples
 
@@ -213,14 +213,14 @@ class Discretize:
                 bestSeparationEntropies = Ent[:]
             # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
-        bestSeparation = self.__getSeparation(feature, bestThreshold)
-        delta = self.__deltaMDLP(i, feature, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
+        bestSeparation = self._getSeparation(feature, bestThreshold)
+        delta = self._deltaMDLP(i, feature, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
         mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
         gain = self.baseEntropy - minEntropy
 
         return (gain>mdlpCriterion, bestThreshold, bestSeparation)
 
-    def __deltaMDLP(self, i, feature, bestSeparation, bestSeparationEntropies):
+    def _deltaMDLP(self, i, feature, bestSeparation, bestSeparationEntropies):
         """Calculate the delta value for a particular feature, as defined in Fayyad and Irani paper for calculating MDLP criterion."""
         assert bestSeparation.dtype=='bool', "Expecting boolean class values when calculating delta value."
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."
@@ -228,7 +228,7 @@ class Discretize:
         classCounts = list(map(lambda s: len(np.unique(self.booleanClasses[s])), [bestSeparation, ~bestSeparation]))
         return np.log2(6) - (2*self.baseEntropy - np.dot(classCounts, bestSeparationEntropies))
 
-    def __getSeparation(self, feature, threshold):
+    def _getSeparation(self, feature, threshold):
         """Ensure that thresholding is performed identically at all times. Threshold candidates are simply the values of the features so we MUST use > and not >=.
 
         Args:
@@ -238,9 +238,9 @@ class Discretize:
         Returns:
             numpy.darray: boolean array defining if a specimen is greater than the threshold.
         """
-        return feature<=threshold
+        return feature>threshold
 
-    def __specimenClassEntropy(self, booleanClasses):
+    def _specimenClassEntropy(self, booleanClasses):
         """Calculate the entropy of classes a group of specimens. Note that this may be the full set of features or separations based on a threshold."""
         assert booleanClasses.dtype=='bool', "Expecting boolean class values when calculating entropy."
         frequencies = np.zeros(2)
