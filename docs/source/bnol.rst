@@ -1,24 +1,24 @@
-bnol package
+BNoL Modules
 ============
 
-bnol.data module
-----------------
+bnol.data
+---------
 
 .. automodule:: bnol.data
     :members:
     :undoc-members:
     :show-inheritance:
 
-bnol.information module
------------------------
+bnol.information
+----------------
 
 .. automodule:: bnol.information
     :members:
     :undoc-members:
     :show-inheritance:
 
-bnol.utility module
--------------------
+bnol.utility
+------------
 
 .. automodule:: bnol.utility
     :members:
