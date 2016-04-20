@@ -7,5 +7,6 @@ DIR=`dirname ${FULLPATH}`
 
 pyclean ${DIR}/../
 
+python --version
 python -m unittest discover ${DIR}/../tests "*.py" -v
 exit $?
