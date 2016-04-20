@@ -111,5 +111,21 @@ class InformationTester(unittest.TestCase):
                 self.assertTrue(np.isclose(entropies[j], t[2][j], data.epsilon()), "Entropies of separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
             self.assertTrue(np.isclose(t[3], D._deltaMDLP(above, entropies), data.epsilon()), "Incorrect delta value for MDLP criterion; test [%d] %s" % (i, t[0]))
 
+    def test_discretization_of_zero_variance_feature(self):
+        """If a single feature has constant value across all specimens there is no threshold that will improve entropy.
+        Previously this would result in None being passed as the optimal entropies for delta calculation.
+        """
+        samples = np.ones((10,1)) * 42
+        classes = np.asarray([1,0]*5, dtype='bool') # actual values don't matter for this bug
+
+        D = information.Discretize()
+        discrete = D.fit_transform(samples, classes)
+
+        self.assertTrue(np.alltrue(discrete==True), "Zero-variance feature should be discretized to True; arbitrarily chosen") # arbitrarily decided to use True
+        self.assertFalse(D.includeFeatures[0], "Zero-variance feature should not be included in discretized values")
+        self.assertEqual(D.bestThresholds[0], 42, "Zero-variance feature should have its constant value as best threshold")
+        self.assertEqual(D.gains[0], 0, "Zero-variance feature should have zero gain in entropy")
+        self.assertGreater(D.mdlpCriteria[0], D.baseEntropy, "Zero-variance feature should have value larger than base entropy as this is impossible to reach")
+
 if __name__=='__main__':
     unittest.main()

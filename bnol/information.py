@@ -175,24 +175,29 @@ class Discretize:
         self.fit(distributions, classes)
         return self.discretizedFeatures if allFeatures else self.discretizedFeatures[:,self.includeFeatures]
 
-    def _processFeature(self, i):
+    def _processFeature(self, featureIdx):
         """Determine threshold value for a single feature and decide if the MDLP criterion is met.
 
         Args:
-            i (int): index of the particular feature.
+            featureIdx (int): index of the particular feature.
 
         Returns:
-            tuple(bool, float, numpy.darray): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold.
+            tuple(bool, float, numpy.darray, float, float): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold; [3] entropy gain as defined in Fayyad and Irani paper; [4] MDLP criterion which entropy gain must exceed.
         """
 
-        feature = self.distributions[:,i]
+        feature = self.distributions[:,featureIdx]
+        thresholds = sorted(np.unique(feature))
         nSamples = len(self.booleanClasses)
+
+        # if all values are the same then it is impossible to improve entropy so bail out early with baseEntropy + 1 as the MDLP criterion as it is impossible to reach
+        if len(thresholds)==1:
+            return (False, thresholds[0], np.asarray([True]*nSamples), 0, self.baseEntropy + 1)
+
         minEntropy = self.baseEntropy
         bestThreshold = None
         bestSeparationEntropies = None
-        thresholds = sorted(np.unique(feature))
 
-        for i, threshold in enumerate(thresholds[:-1]): # therefore MUST use > in splitting and not >=
+        for t, threshold in enumerate(thresholds[:-1]): # therefore MUST use > in splitting and not >=
             """
             This is O(n). Can we find it faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
             """
@@ -211,7 +216,7 @@ class Discretize:
 
             if thresholdEntropy<minEntropy:
                 minEntropy = thresholdEntropy
-                bestThreshold = (thresholds[i] + thresholds[i+1])/2 # note that we only enumerate up to thresholds[-1]
+                bestThreshold = (thresholds[t] + thresholds[t+1])/2 # note that we only enumerate up to thresholds[-1]
                 bestSeparationEntropies = Ent[:]
             # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
