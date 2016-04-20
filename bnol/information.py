@@ -120,9 +120,11 @@ class Discretize:
 
     Attributes:
         baseEntropy (float): class entropy for the whole set of specimens.
-        bestThresholds (numpy.darray): float; shape(n,) optimal, entropy-minimising, threshold for each of the n features.
+        bestThresholds (numpy.darray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
         discretizedFeatures (numpy.darray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
         includeFeatures (numpy.darray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
+        gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for each feature
+        mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for inclusion of each feature
     """
     def __init__(self):
         pass
@@ -146,7 +148,7 @@ class Discretize:
 
         featureDecisions = map(self._processFeature, range(distributions.shape[1])) # use a map so it can later be parallelised
         decisionTuples = zip(*featureDecisions)
-        (self.includeFeatures, self.bestThresholds, self.discretizedFeatures) = map(lambda t: np.asarray(t).T, decisionTuples)
+        (self.includeFeatures, self.bestThresholds, self.discretizedFeatures, self.gains, self.mdlpCriteria) = map(lambda t: np.asarray(t).T, decisionTuples)
 
     def transform(self, distributions, allFeatures=False):
         """Not yet implemented.
@@ -173,24 +175,29 @@ class Discretize:
         self.fit(distributions, classes)
         return self.discretizedFeatures if allFeatures else self.discretizedFeatures[:,self.includeFeatures]
 
-    def _processFeature(self, i):
+    def _processFeature(self, featureIdx):
         """Determine threshold value for a single feature and decide if the MDLP criterion is met.
 
         Args:
-            i (int): index of the particular feature.
+            featureIdx (int): index of the particular feature.
 
         Returns:
-            tuple(bool, float, numpy.darray): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold.
+            tuple(bool, float, numpy.darray, float, float): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold; [3] entropy gain as defined in Fayyad and Irani paper; [4] MDLP criterion which entropy gain must exceed.
         """
 
-        feature = self.distributions[:,i]
+        feature = self.distributions[:,featureIdx]
+        thresholds = sorted(np.unique(feature))
         nSamples = len(self.booleanClasses)
+
+        # if all values are the same then it is impossible to improve entropy so bail out early with baseEntropy + 1 as the MDLP criterion as it is impossible to reach
+        if len(thresholds)==1:
+            return (False, thresholds[0], np.asarray([True]*nSamples), 0, self.baseEntropy + 1)
+
         minEntropy = self.baseEntropy
         bestThreshold = None
         bestSeparationEntropies = None
-        thresholds = sorted(np.unique(feature))
 
-        for i, threshold in enumerate(thresholds[:-1]): # therefore MUST use > in splitting and not >=
+        for t, threshold in enumerate(thresholds[:-1]): # therefore MUST use > in splitting and not >=
             """
             This is O(n). Can we find it faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
             """
@@ -209,18 +216,18 @@ class Discretize:
 
             if thresholdEntropy<minEntropy:
                 minEntropy = thresholdEntropy
-                bestThreshold = (thresholds[i] + thresholds[i+1])/2 # note that we only enumerate up to thresholds[-1]
+                bestThreshold = (thresholds[t] + thresholds[t+1])/2 # note that we only enumerate up to thresholds[-1]
                 bestSeparationEntropies = Ent[:]
             # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
         bestSeparation = self._getSeparation(feature, bestThreshold)
-        delta = self._deltaMDLP(i, feature, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
+        delta = self._deltaMDLP(bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
         mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
         gain = self.baseEntropy - minEntropy
 
-        return (gain>mdlpCriterion, bestThreshold, bestSeparation)
+        return (gain>mdlpCriterion, bestThreshold, bestSeparation, gain, mdlpCriterion)
 
-    def _deltaMDLP(self, i, feature, bestSeparation, bestSeparationEntropies):
+    def _deltaMDLP(self, bestSeparation, bestSeparationEntropies):
         """Calculate the delta value for a particular feature, as defined in Fayyad and Irani paper for calculating MDLP criterion."""
         assert bestSeparation.dtype=='bool', "Expecting boolean class values when calculating delta value."
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."
