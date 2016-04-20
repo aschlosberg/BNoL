@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath('..'))
 from bnol import utility, information, data
 import unittest
 import numpy as np
+import base64
 
 class InformationTester(unittest.TestCase):
 
@@ -119,13 +120,43 @@ class InformationTester(unittest.TestCase):
         classes = np.asarray([1,0]*5, dtype='bool') # actual values don't matter for this bug
 
         D = information.Discretize()
-        discrete = D.fit_transform(samples, classes)
+        D.fit(samples, classes)
+        discrete = D.discretizedFeatures
 
+        self.assertEqual(discrete.shape, samples.shape, "Zero-variance feature discretization can not be checked if using Discretize.fit_transform() - must use discretizedFeatures attribute")
         self.assertTrue(np.alltrue(discrete==True), "Zero-variance feature should be discretized to True; arbitrarily chosen") # arbitrarily decided to use True
         self.assertFalse(D.includeFeatures[0], "Zero-variance feature should not be included in discretized values")
         self.assertEqual(D.bestThresholds[0], 42, "Zero-variance feature should have its constant value as best threshold")
         self.assertEqual(D.gains[0], 0, "Zero-variance feature should have zero gain in entropy")
         self.assertGreater(D.mdlpCriteria[0], D.baseEntropy, "Zero-variance feature should have value larger than base entropy as this is impossible to reach")
+
+    def test_parallel_vs_single_process_discretization(self):
+        """Assuming that the single-process discretization implementation is correct at this point, save some outcomes to compare against the parallelised version.
+        Randomly generate a series of specimens, seeded with nothing-up-my-sleeve type numbers, and then compute their discretization.
+        """
+        seeds = [0, 42, 314159, 0xD15EA5E]
+        expected = [{'discretizedFeatures': 'AQEBAQEBAAEAAQABAAEBAQEBAQAAAAEBAQABAAEBAQEBAQEBAAEAAQABAAEAAQEBAQABAQEAAQAAAAEBAQAAAQAAAQABAAABAAAAAQABAQEBAAEBAAABAAEBAAABAAABAQEBAAAAAAEAAQABAQABAAEAAQABAAEBAQEBAAEBAAEAAAABAAEBAQEBAQEBAQEAAAABAAEBAQABAAAAAQEBAAEAAQEAAQEBAQAAAQABAAABAAEA', 'mdlpCriteria': 'jE9M4Snh3j9JKAsCUPjgP4xPTOEp4d4/+E5dX4lf4z/sodZezgvhP+cA6Q0fBuQ/VwPagvkf4T8aPU2rpfnkP1cD2oL5H+E/7KHWXs4L4T+MT0zhKeHeP/hOXV+JX+M/jE9M4Snh3j+MT0zhKeHeP0koCwJQ+OA/', 'bestThresholds': 'YgAAAAAAAAC7AAAAAAAAAJ4AAAAAAAAAugEAAAAAAACDAgAAAAAAAMAAAAAAAAAA/wEAAAAAAAB9AAAAAAAAAJ4CAAAAAAAAZQIAAAAAAACaAwAAAAAAAFQCAAAAAAAAnQMAAAAAAABiAQAAAAAAAJkBAAAAAAAA', 'gains': 'rBhhZUWVxz9eZIDunwfaP6wYYWVFlcc/KInajDQlyj+4OMZ3p0fOP7AXTp3llb0/xscgFfvr0z/w266vtgSmP8bHIBX769M/uDjGd6dHzj+sGGFlRZXHPyiJ2ow0Jco/rBhhZUWVxz+sGGFlRZXHP15kgO6fB9o/', 'baseEntropy': '42OQiv316T8=', 'includeFeatures': 'AAAAAAAAAAAAAAAAAAAA'}, {'discretizedFeatures': 'AQAAAAEAAQEBAAABAQAAAQAAAQABAAABAQEBAQAAAQEAAAEBAAAAAQEAAQEBAQEBAQEBAQABAAABAQEAAQEBAQEBAAABAQEBAQAAAQEAAQEBAAAAAQEBAAABAQABAQEBAAEBAAABAQABAQABAQEAAQAB', 'mdlpCriteria': 'RUo47KUK6z9tATGSiivqP20BMZKKK+o/bQExkoor6j8gE3SSUxPoP20BMZKKK+o/IBN0klMT6D8gE3SSUxPoPyATdJJTE+g/bQExkoor6j9tATGSiivqP5ufjUH7X+A/IBN0klMT6D9FSjjspQrrP20BMZKKK+o/m5+NQftf4D9tATGSiivqPyATdJJTE+g/K5Sa6lK76j8=', 'bestThresholds': 'fQEAAAAAAADUAQAAAAAAAKkBAAAAAAAACwIAAAAAAACjAAAAAAAAAO0AAAAAAAAAJwEAAAAAAABkAAAAAAAAACQBAAAAAAAAogEAAAAAAAA8AgAAAAAAAKYBAAAAAAAALAAAAAAAAAB8AQAAAAAAAJgBAAAAAAAAJwEAAAAAAACqAgAAAAAAALICAAAAAAAA2wEAAAAAAAA=', 'gains': 'TKApObEa0D97JerxrWLdP3sl6vGtYt0/eyXq8a1i3T9YCVRPokTUP3sl6vGtYt0/WAlUT6JE1D9YCVRPokTUP1gJVE+iRNQ/eyXq8a1i3T97JerxrWLdP3sl6vGtYu0/WAlUT6JE1D9MoCk5sRrQP3sl6vGtYt0/eyXq8a1i7T97JerxrWLdP1gJVE+iRNQ/mBBOWpbyuz8=', 'baseEntropy': 'eyXq8a1i7T8=', 'includeFeatures': 'AAAAAAAAAAAAAAABAAAAAQAAAA=='}, {'discretizedFeatures': 'AQEBAAEBAQEBAQEBAQEBAQABAQABAQ==', 'mdlpCriteria': 'QFrqf6UM4T/z+tBYnyrhPw==', 'bestThresholds': 'XQAAAAAAAABWAQAAAAAAAA==', 'gains': 'GG+b+kqBvD/Q0jvec3HHPw==', 'baseEntropy': 'mvEwchjP7z8=', 'includeFeatures': 'AAA='}, {'discretizedFeatures': 'AQEBAAEBAQEBAQEBAAEBAAEBAQEBAAEBAAEBAQEBAAEBAQEBAQABAQEBAQABAAEBAAEBAQEAAQEBAAEBAQEBAQEBAAEBAQEBAQEBAAEA', 'mdlpCriteria': '4ihw41sa1T+CSzutcafRPy8c7vGM2tE/', 'bestThresholds': 'TAIAAAAAAACdAAAAAAAAAHAAAAAAAAAA', 'gains': 'LP/ZL8cPwT8QdQ7CXBK6P4hUh+A/fbA/', 'baseEntropy': 't/kcEZRz7z8=', 'includeFeatures': 'AAAA'}]
+
+        for i, seed in enumerate(seeds):
+            np.random.seed(seed)
+            nSamples = np.random.randint(30)
+            nFeatures = np.random.randint(20)
+            specimens = np.random.randint(1e3, size=(nSamples, nFeatures))
+            classes = np.random.randint(2, size=nSamples, dtype='bool')
+            D = information.Discretize()
+            D.fit(specimens, classes)
+
+            data = {
+                'baseEntropy' : D.baseEntropy,
+                'discretizedFeatures' : D.discretizedFeatures,
+                'includeFeatures' : D.includeFeatures,
+                'bestThresholds' : D.bestThresholds,
+                'gains' : D.gains,
+                'mdlpCriteria' : D.mdlpCriteria,
+            }
+            for d in data:
+                b64 = base64.b64encode(data[d].tostring(order='C') if type(data[d])==type(np.ndarray) else data[d].tostring())
+                self.assertEqual(b64, expected[i][d], "Incorrect value for information.Discretize attribute '%s' when using random seed %d" % (d, seeds[i]))
 
 if __name__=='__main__':
     unittest.main()
