@@ -141,12 +141,16 @@ class InformationTester(unittest.TestCase):
         elif version==3: # same data but different base64.b64encode output format
             expected = [{'mdlpCriteria': b'jE9M4Snh3j9JKAsCUPjgP4xPTOEp4d4/+E5dX4lf4z/sodZezgvhP+cA6Q0fBuQ/VwPagvkf4T8aPU2rpfnkP1cD2oL5H+E/7KHWXs4L4T+MT0zhKeHeP/hOXV+JX+M/jE9M4Snh3j+MT0zhKeHeP0koCwJQ+OA/', 'gains': b'rBhhZUWVxz9eZIDunwfaP6wYYWVFlcc/KInajDQlyj+4OMZ3p0fOP7AXTp3llb0/xscgFfvr0z/w266vtgSmP8bHIBX769M/uDjGd6dHzj+sGGFlRZXHPyiJ2ow0Jco/rBhhZUWVxz+sGGFlRZXHP15kgO6fB9o/', 'discretizedFeatures': b'AQEBAQEBAAEAAQABAAEBAQEBAQAAAAEBAQABAAEBAQEBAQEBAAEAAQABAAEAAQEBAQABAQEAAQAAAAEBAQAAAQAAAQABAAABAAAAAQABAQEBAAEBAAABAAEBAAABAAABAQEBAAAAAAEAAQABAQABAAEAAQABAAEBAQEBAAEBAAEAAAABAAEBAQEBAQEBAQEAAAABAAEBAQABAAAAAQEBAAEAAQEAAQEBAQAAAQABAAABAAEA', 'baseEntropy': b'42OQiv316T8=', 'bestThresholds': b'AAAAAACgWEAAAAAAAHBnQAAAAAAAwGNAAAAAAACge0AAAAAAABiEQAAAAAAAEGhAAAAAAADwf0AAAAAAAEBfQAAAAAAA8IRAAAAAAAAsg0AAAAAAANCMQAAAAAAApIJAAAAAAADsjEAAAAAAACB2QAAAAAAAkHlA', 'includeFeatures': b'AAAAAAAAAAAAAAAAAAAA'}, {'mdlpCriteria': b'RUo47KUK6z9tATGSiivqP20BMZKKK+o/bQExkoor6j8gE3SSUxPoP20BMZKKK+o/IBN0klMT6D8gE3SSUxPoPyATdJJTE+g/bQExkoor6j9tATGSiivqP5ufjUH7X+A/IBN0klMT6D9FSjjspQrrP20BMZKKK+o/m5+NQftf4D9tATGSiivqPyATdJJTE+g/K5Sa6lK76j8=', 'gains': b'TKApObEa0D97JerxrWLdP3sl6vGtYt0/eyXq8a1i3T9YCVRPokTUP3sl6vGtYt0/WAlUT6JE1D9YCVRPokTUP1gJVE+iRNQ/eyXq8a1i3T97JerxrWLdP3sl6vGtYu0/WAlUT6JE1D9MoCk5sRrQP3sl6vGtYt0/eyXq8a1i7T97JerxrWLdP1gJVE+iRNQ/mBBOWpbyuz8=', 'discretizedFeatures': b'AQAAAAEAAQEBAAABAQAAAQAAAQABAAABAQEBAQAAAQEAAAEBAAAAAQEAAQEBAQEBAQEBAQABAAABAQEAAQEBAQEBAAABAQEBAQAAAQEAAQEBAAAAAQEBAAABAQABAQEBAAEBAAABAQABAQABAQEAAQAB', 'baseEntropy': b'eyXq8a1i7T8=', 'bestThresholds': b'AAAAAADQd0AAAAAAAEh9QAAAAAAAmHpAAAAAAABYgEAAAAAAAHBkQAAAAAAAoG1AAAAAAABwckAAAAAAACBZQAAAAAAAQHJAAAAAAAAoekAAAAAAAOSBQAAAAAAAaHpAAAAAAAAARkAAAAAAAMh3QAAAAAAAiHlAAAAAAABwckAAAAAAAFCFQAAAAAAAlIVAAAAAAACwfUA=', 'includeFeatures': b'AAAAAAAAAAAAAAABAAAAAQAAAA=='}, {'mdlpCriteria': b'QFrqf6UM4T/z+tBYnyrhPw==', 'gains': b'GG+b+kqBvD/Q0jvec3HHPw==', 'discretizedFeatures': b'AQEBAAEBAQEBAQEBAQEBAQABAQABAQ==', 'baseEntropy': b'mvEwchjP7z8=', 'bestThresholds': b'AAAAAABgV0AAAAAAAGB1QA==', 'includeFeatures': b'AAA='}, {'mdlpCriteria': b'4ihw41sa1T+CSzutcafRPy8c7vGM2tE/', 'gains': b'LP/ZL8cPwT8QdQ7CXBK6P4hUh+A/fbA/', 'discretizedFeatures': b'AQEBAAEBAQEBAQEBAAEBAAEBAQEBAAEBAAEBAQEBAAEBAQEBAQABAQEBAQABAAEBAAEBAQEAAQEBAAEBAQEBAQEBAAEBAQEBAQEBAAEA', 'baseEntropy': b't/kcEZRz7z8=', 'bestThresholds': b'AAAAAABkgkAAAAAAALBjQAAAAAAAAFxA', 'includeFeatures': b'AAAA'}]
 
+        # Originally classes were assigned randomly with np.random.randint and dtype='bool' but this caused errors in python3.3; have hardcoded them isntead
+        # See https://travis-ci.org/aschlosberg/BNoL/jobs/124722492
+        allClasses = [[0,0,0,0,1,0,1,0,0,0,1,0],[1,1,1,1,0,0],[1,0,1,0,1,0,0,0,1,0,1],[1,0,1,0,0,0,1,1,0,0,0,0,1,1,1,0,0,0,0,1,1,0,0,1,1,0]]
+
         for i, seed in enumerate(seeds):
             np.random.seed(seed)
             nSamples = np.random.randint(30)
             nFeatures = np.random.randint(20)
             specimens = np.random.randint(1e3, size=(nSamples, nFeatures))
-            classes = np.random.randint(2, size=nSamples, dtype='bool')
+            classes = np.asarray(allClasses[i], dtype='bool')
             D = information.Discretize()
             D.fit(specimens, classes)
 
