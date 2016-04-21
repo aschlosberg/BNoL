@@ -45,7 +45,7 @@ class InformationTester(unittest.TestCase):
         D = information.Discretize()
         mdlpCriterionMet = D.fit_transform(freqs, np.asarray([True, False, True, False]), allFeatures=False)
 
-        self.assertTrue(np.alltrue(D._getSeparation(np.arange(1,6), 3)==[False, False, False, True, True]), "Discretization does not properly threshold feature values. MUST be > and not >=.")
+        self.assertTrue(np.alltrue(D.getSeparation(np.arange(1,6), 3)==[False, False, False, True, True]), "Discretization does not properly threshold feature values. MUST be > and not >=.")
         self.assertEqual(D.includeFeatures.dtype, 'bool', "Feature-inclusion array dtype incorrectly defined for discretization by MDLP")
         self.assertEqual(D.includeFeatures.shape, (nFeatures,), "Feature-inclusion array shape incorrectly defined for discretization by MDLP")
         self.assertTrue(np.alltrue(D.includeFeatures==(D.gains>D.mdlpCriteria)), "Feature-inclusion array does not match that determined by comparing gains array to MDLP criteria array")
@@ -105,12 +105,12 @@ class InformationTester(unittest.TestCase):
         for i, t in enumerate(tests):
             above = np.asarray(t[0], dtype='bool')
             separations = [classes[a] for a in [above, ~above]]
-            entropies = [D._specimenClassEntropy(s) for s in separations]
+            entropies = [D.specimenClassEntropy(s) for s in separations]
 
             for j in range(2):
                 self.assertTrue(np.alltrue(separations[j]==t[1][j]), "Separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
                 self.assertTrue(np.isclose(entropies[j], t[2][j], data.epsilon()), "Entropies of separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
-            self.assertTrue(np.isclose(t[3], D._deltaMDLP(above, entropies), data.epsilon()), "Incorrect delta value for MDLP criterion; test [%d] %s" % (i, t[0]))
+            self.assertTrue(np.isclose(t[3], D.deltaMDLP(classes, ents[3,2], above, entropies), data.epsilon()), "Incorrect delta value for MDLP criterion; test [%d] %s" % (i, t[0]))
 
     def test_discretization_of_zero_variance_feature(self):
         """If a single feature has constant value across all specimens there is no threshold that will improve entropy.
