@@ -14,10 +14,22 @@ class PandasOneVsRest(object):
 
     def informativeGenes(self, allGenes=False):
         order = list(reversed(np.argsort(self.Discrete.gains)))
-        return self.genes[order]
+
+        D = self.Discrete
+        return pd.DataFrame(
+            data = np.vstack((
+                    D.includeFeatures[order],
+                    D.gains[order],
+                    D.mdlpCriteria[order],
+                )),
+            columns=self.genes[order],
+            index=['Informative', 'Gain', 'MDLP-Criterion'],
+            dtype='float',
+            copy=True,
+        )
 
 
-class CufflinksOneVsRest(PandasOneVsRest):
+class CuffnormOneVsRest(PandasOneVsRest):
     def __init__(self, cufflinksOutputPath, binaryClasses):
         specimens = pd.read_csv(cufflinksOutputPath, delimiter='\t', index_col=0).T
-        super(CufflinksOneVsRest, self).__init__(specimens, binaryClasses)
+        super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
