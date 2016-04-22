@@ -10,10 +10,10 @@ def Entropy(distributions):
     Wrapper for scipy.stats.entropy(distributions.T) with base=2.
 
     Args:
-        distributions (numpy.darray): shape (n,p) representing relative frequencies of the p features across n specimens.
+        distributions (numpy.ndarray): shape (n,p) representing relative frequencies of the p features across n specimens.
 
     Returns:
-        numpy.darray(): n information entropy values, one for each specimen.
+        numpy.ndarray(): n information entropy values, one for each specimen.
     """
 
     return entropy(np.asarray(distributions).T, base=2)
@@ -26,8 +26,8 @@ class Divergence(object):
     See `Wikipedia: Statistical distance <https://en.wikipedia.org/wiki/Statistical_distance>`_ as well as links in individual measures.
 
     Args:
-        P (Optional[numpy.darray]): shape (1,p) defining a reference sequence against which divergence is calculated. If not provided then a p-dimensional discrete uniform is used.
-        Qs (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens. NOTE: Although it has a default value of None, this is not optional (the ordering of P and Qs parameters is a sane choice given scipy.stats.entropy and this requires that Qs have a default if P does).
+        P (Optional[numpy.ndarray]): shape (1,p) defining a reference sequence against which divergence is calculated. If not provided then a p-dimensional discrete uniform is used.
+        Qs (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens. NOTE: Although it has a default value of None, this is not optional (the ordering of P and Qs parameters is a sane choice given scipy.stats.entropy and this requires that Qs have a default if P does).
 
     Raises:
         Exception: If no value is provided for Qs.
@@ -63,7 +63,7 @@ class Divergence(object):
         See `Wikipedia: Kullback-Leibler divergence <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
 
         Returns:
-            numpy.darray: n divergence values, one for each specimen.
+            numpy.ndarray: n divergence values, one for each specimen.
         """
         return np.asarray([entropy(self.P[0], self.Qs[i], base=2) for i in range(self.nQs)])
 
@@ -81,7 +81,7 @@ class Divergence(object):
                 JSD(P||Q) = (KLD(P||M) + KLD(Q||M)) / 2
 
         Returns:
-            numpy.darray: n divergence values, one for each specimen.
+            numpy.ndarray: n divergence values, one for each specimen.
         """
         Ms = (self.Qs + self.P) / 2
         D_PM = Divergence(self.P, Ms).KL()
@@ -94,11 +94,11 @@ def Complexity(distributions, reference=None):
     See `Berretta et al. Cancer biomarker discovery: The entropic hallmark <https://dx.doi.org/10.1371/journal.pone.0012262>`_.
 
     Args:
-        distributions (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens.
-        reference (Optional[numpy.darray]): shape(1,p) defining a reference sequence against which complexity is calculated. If not provided then the average of all distributions is used.
+        distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
+        reference (Optional[numpy.ndarray]): shape(1,p) defining a reference sequence against which complexity is calculated. If not provided then the average of all distributions is used.
 
     Returns:
-        numpy.darray: n complexity values, one for each specimen.
+        numpy.ndarray: n complexity values, one for each specimen.
     """
     if reference is None:
         reference = np.sum(distributions, axis=0)
@@ -115,10 +115,10 @@ def ParallelFeatureDiscretization(tupleArguments):
     We are also limited to a single argument so the tuple is unwrapped as (feature, booleanClasses, baseEntropy).
 
     Args:
-        tupleArguments (numpy.ndarray, numpy.ndarray, float): [0] feature: shape (n,1); feature values for all specimens; [1] booleanClasses: shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.darray.astype('bool'); [2] baseEntropy: entropy value pre-calculated for booleanClasses
+        tupleArguments (numpy.ndarray, numpy.ndarray, float): [0] feature: shape (n,1); feature values for all specimens; [1] booleanClasses: shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool'); [2] baseEntropy: entropy value pre-calculated for booleanClasses
 
     Returns:
-        tuple(bool, float, numpy.darray, float, float): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold; [3] entropy gain as defined in Fayyad and Irani paper; [4] MDLP criterion which entropy gain must exceed
+        tuple(bool, float, numpy.ndarray, float, float): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold; [3] entropy gain as defined in Fayyad and Irani paper; [4] MDLP criterion which entropy gain must exceed
     """
     (feature, booleanClasses, baseEntropy) = tupleArguments
     thresholds = sorted(np.unique(feature))
@@ -176,9 +176,9 @@ class Discretize:
 
     Attributes:
         baseEntropy (float): class entropy for the whole set of specimens.
-        bestThresholds (numpy.darray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
-        discretizedFeatures (numpy.darray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
-        includeFeatures (numpy.darray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
+        bestThresholds (numpy.ndarray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
+        discretizedFeatures (numpy.ndarray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
+        includeFeatures (numpy.ndarray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
         gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for each feature
         mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for inclusion of each feature
     """
@@ -189,8 +189,8 @@ class Discretize:
         """Determine threshold values for each feature.
 
         Args:
-            distributions (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens.
-            classes (numpy.darray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.darray.astype('bool').
+            distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
+            classes (numpy.ndarray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool').
 
         Raises:
             Exception: if number of samples is different in distributions and classes arguments.
@@ -226,12 +226,12 @@ class Discretize:
             Use Discretize.includeFeatures attribute to determine which features are included when allFeatures==False.
 
         Args:
-            distributions (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens.
-            classes (numpy.darray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.darray.astype('bool').
+            distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
+            classes (numpy.ndarray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool').
             allFeatures (bool): if False will exclude those features for which the MDLP criterion was not met.
 
         Returns:
-            numpy.darray: boolean; shape (n,p) if allFeatures==true otherwise shape (n`,p) where n` is the number of features for which MDLP criterion was met; boolean value represents whether or not each specimen-feature value exceeds the optimal threshold for said feature.
+            numpy.ndarray: boolean; shape (n,p) if allFeatures==true otherwise shape (n`,p) where n` is the number of features for which MDLP criterion was met; boolean value represents whether or not each specimen-feature value exceeds the optimal threshold for said feature.
         """
         self.fit(distributions, classes)
         return self.discretizedFeatures if allFeatures else self.discretizedFeatures[:,self.includeFeatures]
@@ -250,11 +250,11 @@ class Discretize:
         """Ensure that thresholding is performed identically at all times. Threshold candidates are simply the values of the features so we MUST use > and not >=.
 
         Args:
-            feature (numpy.darray): shape (n,) vector defining relative frequency of feature across all specimens.
+            feature (numpy.ndarray): shape (n,) vector defining relative frequency of feature across all specimens.
             threshold (float): value for separation of specimens into groups based on their feature value.
 
         Returns:
-            numpy.darray: boolean array defining if a specimen is greater than the threshold.
+            numpy.ndarray: boolean array defining if a specimen is greater than the threshold.
         """
         return feature>threshold
 
