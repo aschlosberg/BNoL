@@ -10,7 +10,7 @@ pyclean ${DIR}/../
 exitCode=0
 
 function runTestsWith {
-    $($1 -m unittest discover ${DIR}/../tests '*.py' -v)
+    eval "$1 -m unittest discover ${DIR}/../tests '*.py' -v"
     [ $? -eq 0 ] || exitCode=1
 }
 
