@@ -1,4 +1,4 @@
-import numpy as np, pandas as pd, requests
+import numpy as np, pandas as pd, grequests
 from . import information
 
 class PandasOneVsRest(object):
@@ -80,27 +80,35 @@ class CuffnormOneVsRest(PandasOneVsRest):
         super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
 
 ensemblFormats = set(['full', 'condensed'])
-def EnsemblLookup(id, format='full'):
+def EnsemblLookup(ids, lookupFormat='full'):
     """Use the Ensembl REST API 'lookup' to return data corresponding to a particular ID.
 
     http://rest.ensembl.org/documentation/info/lookup
 
     Args:
-        id (string): Ensembl ID
-        format (string): One of 'full' or 'condensed' as described in the API documentation
+        ids (list or string): Ensembl IDs in a list; will accept a string
+        lookupFormat (string): One of 'full' or 'condensed' as described in the API documentation
 
     Returns:
-        dict: The JSON data returned by the API, converted to a dict.
+        list or dict: The JSON data returned by the API, converted to a dict. Will return a single dict if string ID passed.
 
     Raises:
         Exception: if an invalid format string is passed.
-        Exception: if the API request returns a status code other than 200.
     """
-    if not format in ensemblFormats:
-        raise Exception("Ensembl lookup can only be 'full' or 'condensed'")
+    if not lookupFormat in ensemblFormats:
+        raise Exception("Ensembl lookup can only be 'full' or 'condsensed'")
 
-    r = requests.get("https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=%s" % (id, format))
-    if not r.status_code==200:
-        raise Exception("Ensembl lookup failed: %s (%s)" % (r.text, r.status_code))
+    if isinstance(ids, str):
+        ids = [ids]
+        returnAsList = False
+    else:
+        returnAsList = True
 
-    return r.json()
+    urls = ["https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=%s" % (i, lookupFormat) for i in ids]
+    rs = (grequests.get(u) for u in urls)
+    data = grequests.map(rs)
+
+    if returnAsList:
+        return [d.json() for d in data]
+    else:
+        return data[0].json()
