@@ -243,7 +243,8 @@ class Discretize:
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."
 
         classCounts = list(map(lambda s: len(np.unique(booleanClasses[s])), [bestSeparation, ~bestSeparation]))
-        return np.log2(6) - (2*baseEntropy - np.dot(classCounts, bestSeparationEntropies))
+        k = 2 # see Fayyad and Irani: class count prior to separation
+        return np.log2(3**k - 2) - (k*baseEntropy - np.dot(classCounts, bestSeparationEntropies))
 
     @staticmethod
     def getSeparation(feature, threshold):
