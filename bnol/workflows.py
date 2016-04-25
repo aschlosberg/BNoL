@@ -99,7 +99,7 @@ def EnsemblLookup(id, format='full'):
     if not format in ensemblFormats:
         raise Exception("Ensembl lookup can only be 'full' or 'condensed'")
 
-    r = requests.get("https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=full" % id)
+    r = requests.get("https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=%s" % (id, format))
     if not r.status_code==200:
         raise Exception("Ensembl lookup failed: %s (%s)" % (r.text, r.status_code))
 
