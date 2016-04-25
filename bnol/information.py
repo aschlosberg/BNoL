@@ -3,16 +3,17 @@
 import numpy as np
 from scipy.stats import entropy
 from . import utility
+import multiprocessing
 
 def Entropy(distributions):
     """Calculate information entropy (in bits) for a set of distributions.
     Wrapper for scipy.stats.entropy(distributions.T) with base=2.
 
     Args:
-        distributions (numpy.darray): shape (n,p) representing relative frequencies of the p features across n specimens.
+        distributions (numpy.ndarray): shape (n,p) representing relative frequencies of the p features across n specimens.
 
     Returns:
-        numpy.darray(): n information entropy values, one for each specimen.
+        numpy.ndarray(): n information entropy values, one for each specimen.
     """
 
     return entropy(np.asarray(distributions).T, base=2)
@@ -25,8 +26,8 @@ class Divergence(object):
     See `Wikipedia: Statistical distance <https://en.wikipedia.org/wiki/Statistical_distance>`_ as well as links in individual measures.
 
     Args:
-        P (Optional[numpy.darray]): shape (1,p) defining a reference sequence against which divergence is calculated. If not provided then a p-dimensional discrete uniform is used.
-        Qs (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens. NOTE: Although it has a default value of None, this is not optional (the ordering of P and Qs parameters is a sane choice given scipy.stats.entropy and this requires that Qs have a default if P does).
+        P (Optional[numpy.ndarray]): shape (1,p) defining a reference sequence against which divergence is calculated. If not provided then a p-dimensional discrete uniform is used.
+        Qs (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens. NOTE: Although it has a default value of None, this is not optional (the ordering of P and Qs parameters is a sane choice given scipy.stats.entropy and this requires that Qs have a default if P does).
 
     Raises:
         Exception: If no value is provided for Qs.
@@ -62,7 +63,7 @@ class Divergence(object):
         See `Wikipedia: Kullback-Leibler divergence <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
 
         Returns:
-            numpy.darray: n divergence values, one for each specimen.
+            numpy.ndarray: n divergence values, one for each specimen.
         """
         return np.asarray([entropy(self.P[0], self.Qs[i], base=2) for i in range(self.nQs)])
 
@@ -80,7 +81,7 @@ class Divergence(object):
                 JSD(P||Q) = (KLD(P||M) + KLD(Q||M)) / 2
 
         Returns:
-            numpy.darray: n divergence values, one for each specimen.
+            numpy.ndarray: n divergence values, one for each specimen.
         """
         Ms = (self.Qs + self.P) / 2
         D_PM = Divergence(self.P, Ms).KL()
@@ -93,11 +94,11 @@ def Complexity(distributions, reference=None):
     See `Berretta et al. Cancer biomarker discovery: The entropic hallmark <https://dx.doi.org/10.1371/journal.pone.0012262>`_.
 
     Args:
-        distributions (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens.
-        reference (Optional[numpy.darray]): shape(1,p) defining a reference sequence against which complexity is calculated. If not provided then the average of all distributions is used.
+        distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
+        reference (Optional[numpy.ndarray]): shape(1,p) defining a reference sequence against which complexity is calculated. If not provided then the average of all distributions is used.
 
     Returns:
-        numpy.darray: n complexity values, one for each specimen.
+        numpy.ndarray: n complexity values, one for each specimen.
     """
     if reference is None:
         reference = np.sum(distributions, axis=0)
@@ -106,6 +107,61 @@ def Complexity(distributions, reference=None):
     E = Entropy(distributions)
     D = Divergence(P=reference, Qs=distributions)
     return np.multiply(E, D.JS()) # element-wise multiplication
+
+def ParallelFeatureDiscretization(tupleArguments):
+    """Determine threshold value for a single feature and decide if the MDLP criterion is met.
+
+    This is not a method of class information.Discretize as we require a function defined at the top of the module to allow for pickling prior to use with multiprocessing.Pool.
+    We are also limited to a single argument so the tuple is unwrapped as (feature, booleanClasses, baseEntropy).
+
+    Args:
+        tupleArguments (numpy.ndarray, numpy.ndarray, float): [0] feature: shape (n,1); feature values for all specimens; [1] booleanClasses: shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool'); [2] baseEntropy: entropy value pre-calculated for booleanClasses
+
+    Returns:
+        tuple(bool, float, numpy.ndarray, float, float): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold; [3] entropy gain as defined in Fayyad and Irani paper; [4] MDLP criterion which entropy gain must exceed
+    """
+    (feature, booleanClasses, baseEntropy) = tupleArguments
+    thresholds = sorted(np.unique(feature))
+    nSamples = len(booleanClasses)
+
+    # if all values are the same then it is impossible to improve entropy so bail out early with baseEntropy + 1 as the MDLP criterion as it is impossible to reach
+    if len(thresholds)==1:
+        return (False, thresholds[0], np.asarray([True]*nSamples), 0, baseEntropy + 1)
+
+    minEntropy = baseEntropy
+    bestThreshold = None
+    bestSeparationEntropies = None
+
+    for t, threshold in enumerate(thresholds[:-1]): # therefore MUST use > in splitting and not >=
+        """
+        This loop is O(n) if we consider its working to be constant. Can we find the optimal threshold faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
+        The point of this function is to determine entropy-reducing ability of each feature so we can't make assumptions; thus I think O(n) is best possible as we must check every threshold.
+        """
+        separation = Discretize.getSeparation(feature, threshold)
+
+        n = [None]*2
+        Ent = [None]*2
+
+        n[0] = np.count_nonzero(separation)
+        Ent[0] = Discretize.specimenClassEntropy(booleanClasses[separation])
+
+        n[1] = nSamples - n[0]
+        Ent[1] = Discretize.specimenClassEntropy(booleanClasses[~separation])
+
+        thresholdEntropy = np.dot(n, Ent) / nSamples
+
+        if thresholdEntropy<minEntropy:
+            minEntropy = thresholdEntropy
+            bestThreshold = (thresholds[t] + thresholds[t+1])/2 # note that we only enumerate up to thresholds[-1]
+            bestSeparationEntropies = Ent[:]
+        # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
+
+    bestSeparation = Discretize.getSeparation(feature, bestThreshold)
+    delta = Discretize.deltaMDLP(booleanClasses, baseEntropy, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
+    mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
+    gain = baseEntropy - minEntropy
+
+    return (gain>mdlpCriterion, bestThreshold, bestSeparation, gain, mdlpCriterion)
 
 class Discretize:
     """Information-theoretic method for discrete feature selection based on Minimum Description Length Principle (MDLP).
@@ -120,9 +176,9 @@ class Discretize:
 
     Attributes:
         baseEntropy (float): class entropy for the whole set of specimens.
-        bestThresholds (numpy.darray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
-        discretizedFeatures (numpy.darray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
-        includeFeatures (numpy.darray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
+        bestThresholds (numpy.ndarray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
+        discretizedFeatures (numpy.ndarray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
+        includeFeatures (numpy.ndarray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
         gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for each feature
         mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for inclusion of each feature
     """
@@ -133,8 +189,8 @@ class Discretize:
         """Determine threshold values for each feature.
 
         Args:
-            distributions (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens.
-            classes (numpy.darray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.darray.astype('bool').
+            distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
+            classes (numpy.ndarray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool').
 
         Raises:
             Exception: if number of samples is different in distributions and classes arguments.
@@ -143,10 +199,15 @@ class Discretize:
             raise Exception("Number of class indicators for descritization must equal number of samples provided.")
 
         self.booleanClasses = classes.astype('bool')
-        self.baseEntropy = self._specimenClassEntropy(self.booleanClasses)
+        self.baseEntropy = self.specimenClassEntropy(self.booleanClasses)
         self.distributions = distributions
 
-        featureDecisions = map(self._processFeature, range(distributions.shape[1])) # use a map so it can later be parallelised
+        pool = multiprocessing.Pool()
+        tupleArguments = [] # pool.map() will only allow a single argument so combine them as a tuple
+        for featureIdx in range(distributions.shape[1]):
+            tupleArguments.append((self.distributions[:,featureIdx], self.booleanClasses, self.baseEntropy))
+
+        featureDecisions = pool.map(ParallelFeatureDiscretization, tupleArguments) # use a map so it can later be parallelised
         decisionTuples = zip(*featureDecisions)
         (self.includeFeatures, self.bestThresholds, self.discretizedFeatures, self.gains, self.mdlpCriteria) = map(lambda t: np.asarray(t).T, decisionTuples)
 
@@ -165,89 +226,41 @@ class Discretize:
             Use Discretize.includeFeatures attribute to determine which features are included when allFeatures==False.
 
         Args:
-            distributions (numpy.darray): shape (n,p) defining the relative frequencies of features in the n specimens.
-            classes (numpy.darray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.darray.astype('bool').
+            distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
+            classes (numpy.ndarray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool').
             allFeatures (bool): if False will exclude those features for which the MDLP criterion was not met.
 
         Returns:
-            numpy.darray: boolean; shape (n,p) if allFeatures==true otherwise shape (n`,p) where n` is the number of features for which MDLP criterion was met; boolean value represents whether or not each specimen-feature value exceeds the optimal threshold for said feature.
+            numpy.ndarray: boolean; shape (n,p) if allFeatures==true otherwise shape (n`,p) where n` is the number of features for which MDLP criterion was met; boolean value represents whether or not each specimen-feature value exceeds the optimal threshold for said feature.
         """
         self.fit(distributions, classes)
         return self.discretizedFeatures if allFeatures else self.discretizedFeatures[:,self.includeFeatures]
 
-    def _processFeature(self, featureIdx):
-        """Determine threshold value for a single feature and decide if the MDLP criterion is met.
-
-        Args:
-            featureIdx (int): index of the particular feature.
-
-        Returns:
-            tuple(bool, float, numpy.darray, float, float): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold; [3] entropy gain as defined in Fayyad and Irani paper; [4] MDLP criterion which entropy gain must exceed.
-        """
-
-        feature = self.distributions[:,featureIdx]
-        thresholds = sorted(np.unique(feature))
-        nSamples = len(self.booleanClasses)
-
-        # if all values are the same then it is impossible to improve entropy so bail out early with baseEntropy + 1 as the MDLP criterion as it is impossible to reach
-        if len(thresholds)==1:
-            return (False, thresholds[0], np.asarray([True]*nSamples), 0, self.baseEntropy + 1)
-
-        minEntropy = self.baseEntropy
-        bestThreshold = None
-        bestSeparationEntropies = None
-
-        for t, threshold in enumerate(thresholds[:-1]): # therefore MUST use > in splitting and not >=
-            """
-            This is O(n). Can we find it faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
-            """
-            separation = self._getSeparation(feature, threshold)
-
-            n = [None]*2
-            Ent = [None]*2
-
-            n[0] = np.count_nonzero(separation)
-            Ent[0] = self._specimenClassEntropy(self.booleanClasses[separation])
-
-            n[1] = nSamples - n[0]
-            Ent[1] = self._specimenClassEntropy(self.booleanClasses[~separation])
-
-            thresholdEntropy = np.dot(n, Ent) / nSamples
-
-            if thresholdEntropy<minEntropy:
-                minEntropy = thresholdEntropy
-                bestThreshold = (thresholds[t] + thresholds[t+1])/2 # note that we only enumerate up to thresholds[-1]
-                bestSeparationEntropies = Ent[:]
-            # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
-
-        bestSeparation = self._getSeparation(feature, bestThreshold)
-        delta = self._deltaMDLP(bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
-        mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
-        gain = self.baseEntropy - minEntropy
-
-        return (gain>mdlpCriterion, bestThreshold, bestSeparation, gain, mdlpCriterion)
-
-    def _deltaMDLP(self, bestSeparation, bestSeparationEntropies):
+    @staticmethod
+    def deltaMDLP(booleanClasses, baseEntropy, bestSeparation, bestSeparationEntropies):
         """Calculate the delta value for a particular feature, as defined in Fayyad and Irani paper for calculating MDLP criterion."""
         assert bestSeparation.dtype=='bool', "Expecting boolean class values when calculating delta value."
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."
 
-        classCounts = list(map(lambda s: len(np.unique(self.booleanClasses[s])), [bestSeparation, ~bestSeparation]))
-        return np.log2(6) - (2*self.baseEntropy - np.dot(classCounts, bestSeparationEntropies))
+        classCounts = list(map(lambda s: len(np.unique(booleanClasses[s])), [bestSeparation, ~bestSeparation]))
+        k = 2 # see Fayyad and Irani: class count prior to separation
+        return np.log2(3**k - 2) - (k*baseEntropy - np.dot(classCounts, bestSeparationEntropies))
 
-    def _getSeparation(self, feature, threshold):
+    @staticmethod
+    def getSeparation(feature, threshold):
         """Ensure that thresholding is performed identically at all times. Threshold candidates are simply the values of the features so we MUST use > and not >=.
 
         Args:
-            feature (numpy.darray): shape (n,) vector defining relative frequency of feature across all specimens.
+            feature (numpy.ndarray): shape (n,) vector defining relative frequency of feature across all specimens.
             threshold (float): value for separation of specimens into groups based on their feature value.
 
         Returns:
-            numpy.darray: boolean array defining if a specimen is greater than the threshold.
+            numpy.ndarray: boolean array defining if a specimen is greater than the threshold.
         """
         return feature>threshold
 
-    def _specimenClassEntropy(self, booleanClasses):
+    @staticmethod
+    def specimenClassEntropy(booleanClasses):
         """Calculate the entropy of classes a group of specimens. Note that this may be the full set of features or separations based on a threshold."""
         assert booleanClasses.dtype=='bool', "Expecting boolean class values when calculating entropy."
         frequencies = np.zeros(2)

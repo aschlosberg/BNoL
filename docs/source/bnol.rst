@@ -24,3 +24,11 @@ bnol.utility
     :members:
     :undoc-members:
     :show-inheritance:
+
+bnol.workflows
+--------------
+
+.. automodule:: bnol.workflows
+    :members:
+    :undoc-members:
+    :show-inheritance:

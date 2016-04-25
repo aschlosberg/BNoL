@@ -1,5 +1,11 @@
 sudo: false
 language: python
+notifications:
+  email:
+    recipients:
+      - me@arranschlosberg.com
+    on_success: change
+    on_failure: always
 python:
   - "2.7"
   - "3.3"
@@ -19,6 +25,6 @@ before_install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda update --yes conda
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas
 script:
   - ./dev-scripts/run-tests.sh
