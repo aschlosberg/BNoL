@@ -1,4 +1,4 @@
-import numpy as np, pandas as pd
+import numpy as np, pandas as pd, requests
 from . import information
 
 class PandasOneVsRest(object):
@@ -78,3 +78,29 @@ class CuffnormOneVsRest(PandasOneVsRest):
     def __init__(self, cuffnormOutputPath, binaryClasses):
         specimens = pd.read_csv(cuffnormOutputPath, delimiter='\t', index_col=0).T
         super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
+
+ensemblFormats = set(['full', 'condensed'])
+def EnsemblLookup(id, format='full'):
+    """Use the Ensembl REST API 'lookup' to return data corresponding to a particular ID.
+
+    http://rest.ensembl.org/documentation/info/lookup
+
+    Args:
+        id (string): Ensembl ID
+        format (string): One of 'full' or 'condensed' as described in the API documentation
+
+    Returns:
+        dict: The JSON data returned by the API, converted to a dict.
+
+    Raises:
+        Exception: if an invalid format string is passed.
+        Exception: if the API request returns a status code other than 200.
+    """
+    if not format in ensemblFormats:
+        raise Exception("Ensembl lookup can only be 'full' or 'condensed'")
+
+    r = requests.get("https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=full" % id)
+    if not r.status_code==200:
+        raise Exception("Ensembl lookup failed: %s (%s)" % (r.text, r.status_code))
+
+    return r.json()
