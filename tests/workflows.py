@@ -7,7 +7,7 @@ import unittest
 from numpyfied import NumpyfiedTestCase
 import numpy as np
 
-class WorflowsTester(NumpyfiedTestCase):
+class WorkflowsTester(NumpyfiedTestCase):
 
     @staticmethod
     def _testFilePath(filename):

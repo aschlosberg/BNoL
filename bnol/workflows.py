@@ -113,13 +113,13 @@ class PandasMultiClassCompare(PandasOneVsRest):
         classes = np.unique(self.multiClasses)
         allComparisons = dict()
         for c in classes:
-            self.binaryClasses = self._getBinaryClasses(self.multiClasses, c)
+            self.binaryClasses = np.asarray(self._getBinaryClasses(self.multiClasses, c))
             allComparisons[c] = super(PandasMultiClassCompare, self).informativeGenes(allGenes)
         return allComparisons
 
     @staticmethod
     def _getBinaryClasses(multiClasses, trueClass):
-        return np.asarray(multiClasses)==trueClass
+        return [c==trueClass for c in multiClasses]
 
 class CuffnormMultiClassCompare(PandasMultiClassCompare, CuffnormReader):
     """Convenience wrapper for :py:class:`PandasMultiClassCompare` to automatically load data from cuffnorm gene and FPKM counts.
@@ -174,7 +174,10 @@ def EnsemblLookup(ensemblIDs, lookupFormat='full', rebuildCache=False):
 
     memo.close()
 
+    def returnValue(d):
+        return d.json() if d is not None else dict()
+
     if returnAsList:
-        return [d.json() for d in data]
+        return [returnValue(d) for d in data]
     else:
-        return data[0].json()
+        return returnValue(data[0])
