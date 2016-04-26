@@ -9,8 +9,11 @@ class PandasOneVsRest(object):
     Provides standardized access to means of ranking genes e.g. through entropy improvement via :py:class:`~bnol.information.Discretize`.
 
     Args:
-        specimens (pandas.DataFrame): shape (n,p) where the n index values constitute the specimens and the p columns the genes
-        binaryClasses (numpy.ndarray): bool; shape (n,) class designation for each of the n specimens
+        specimens (pandas.DataFrame): shape (n,p) where the n index values constitute the specimens and the p columns the genes.
+        binaryClasses (numpy.ndarray): bool; shape (n,) class designation for each of the n specimens.
+
+    Raises:
+        Exception: if there is not exactly one class designation for each specimen.
     """
     def __init__(self, specimens, binaryClasses):
         self.specimens = np.asarray(specimens)
@@ -70,7 +73,13 @@ class PandasOneVsRest(object):
             copy=True,
         )
 
-class CuffnormOneVsRest(PandasOneVsRest):
+class CuffnormReader(object):
+    """Class to abstract conversion of cuffnorm output to Pandas DataFrame."""
+    @staticmethod
+    def getSpecimens(cuffnormOutputPath):
+        return pd.read_csv(cuffnormOutputPath, delimiter='\t', index_col=0).T
+
+class CuffnormOneVsRest(PandasOneVsRest, CuffnormReader):
     """Convenience wrapper for :py:class:`PandasOneVsRest` to automatically load data from cuffnorm gene and FPKM counts.
 
     Args:
@@ -78,8 +87,50 @@ class CuffnormOneVsRest(PandasOneVsRest):
         binaryClasses (numpy.ndarray): bool; shape (n,); classification of each of the n specimens present in cuffnormOutputPath
     """
     def __init__(self, cuffnormOutputPath, binaryClasses):
-        specimens = pd.read_csv(cuffnormOutputPath, delimiter='\t', index_col=0).T
+        specimens = self.getSpecimens(cuffnormOutputPath)
         super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
+
+class PandasMultiClassCompare(PandasOneVsRest):
+    """Convenience wrapper to run :py:class:`PandasOneVsRest` analyses on multi-class data by running c different one-vs-rest analyses, where c is the total number of classes.
+
+    Args:
+        specimens (pandas.DataFrame): shape (n,p) where the n index values constitute the specimens and the p columns the genes.
+        multiClasses (list): length (n) class designation for each of the n specimens; can include any type that may be used as a dict key.
+    """
+    def __init__(self, specimens, multiClasses):
+        self.multiClasses = multiClasses
+        super(PandasMultiClassCompare, self).__init__(specimens, multiClasses) # will modify binaryClasses for each run, but need something in there for now and this will check the size of the array
+
+    def informativeGenes(self, allGenes=False):
+        """See :py:class:`bnol.workflows.PandasOneVsRest.informativeGenes` for base behaviour, repeated for each class.
+
+        Args:
+            allGenes (bool): as it says on the box if True else only return those genes for which the entropy gain is greater than the MDLP criterion.
+
+        Returns:
+            dict: pandas.DataFrame: each entry being a pandas.DataFrame object returned by one-vs-rest analysis.
+        """
+        classes = np.unique(self.multiClasses)
+        allComparisons = dict()
+        for c in classes:
+            self.binaryClasses = self._getBinaryClasses(self.multiClasses, c)
+            allComparisons[c] = super(PandasMultiClassCompare, self).informativeGenes(allGenes)
+        return allComparisons
+
+    @staticmethod
+    def _getBinaryClasses(multiClasses, trueClass):
+        return np.asarray(multiClasses)==trueClass
+
+class CuffnormMultiClassCompare(PandasMultiClassCompare, CuffnormReader):
+    """Convenience wrapper for :py:class:`PandasMultiClassCompare` to automatically load data from cuffnorm gene and FPKM counts.
+
+    Args:
+        cuffnormOutputPath (string): path to cuffnorm output
+        multiClasses (list): length (n) class designation for each of the n specimens present in cuffnormOutputPath; can include any type that may be used as a dict key.
+    """
+    def __init__(self, cuffnormOutputPath, multiClasses):
+        specimens = self.getSpecimens(cuffnormOutputPath)
+        super(CuffnormMultiClassCompare, self).__init__(specimens, multiClasses)
 
 ensemblFormats = {'full', 'condensed'} # set {} has faster lookup than list []
 def EnsemblLookup(ensemblIDs, lookupFormat='full', rebuildCache=False):
