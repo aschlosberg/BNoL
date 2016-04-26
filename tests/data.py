@@ -4,9 +4,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 
 from bnol import utility, data
 import unittest
+from numpyfied import NumpyfiedTestCase
 import numpy as np
 
-class DataTester(unittest.TestCase):
+class DataTester(NumpyfiedTestCase):
 
     def test_sample_data_from_Berretta_2010_paper(self):
         freqs = data.BerrettaExpression()
@@ -15,11 +16,11 @@ class DataTester(unittest.TestCase):
 
         normalizedSample = utility.Normalize(freqs[-1])
         sameSizeUniform = utility.DiscreteUniform(freqs.shape[1])
-        self.assertTrue(np.alltrue(normalizedSample==sameSizeUniform), "Final specimen in Berretta data should be uniform distribution")
+        self.assertAllTrue(normalizedSample==sameSizeUniform, "Final specimen in Berretta data should be uniform distribution")
 
         first = sorted(freqs[0])
         second = sorted(freqs[1])
-        self.assertTrue(np.alltrue(first==second), "First and second specimens in Berretta data should be permutations")
+        self.assertAllTrue(first==second, "First and second specimens in Berretta data should be permutations")
 
 if __name__=='__main__':
     unittest.main()

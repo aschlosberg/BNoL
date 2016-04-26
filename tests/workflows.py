@@ -4,9 +4,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 
 from bnol import workflows
 import unittest
+from numpyfied import NumpyfiedTestCase
 import numpy as np
 
-class WorflowsTester(unittest.TestCase):
+class WorflowsTester(NumpyfiedTestCase):
 
     @staticmethod
     def _testFilePath(filename):
@@ -20,13 +21,13 @@ class WorflowsTester(unittest.TestCase):
         nInformative = len(onlyInformative.index)
         ranking = ["GENE_%s" % g for g in ['F','D','G','C','I','H','E','A','B']]
 
-        self.assertTrue(np.alltrue(allGenes.index==ranking), "Incorrect ranking of genes by entropy gain")
-        self.assertTrue(np.alltrue(onlyInformative.index==allGenes.index[:nInformative]), "Incorrect subset of genes in informative grouping")
-        self.assertTrue(np.alltrue(onlyInformative==allGenes.iloc[:nInformative,:]), "Values for informative genes do not match across informative / all-genes groups")
-        self.assertTrue(np.alltrue(onlyInformative.loc[:,'Informative']==1), "Non-informative genes included in informative-only group")
-        self.assertTrue(np.alltrue(allGenes.loc[:,'Informative'][nInformative:]==0), "Informative genes included in non-informative section")
+        self.assertAllTrue(allGenes.index==ranking, "Incorrect ranking of genes by entropy gain")
+        self.assertAllTrue(onlyInformative.index==allGenes.index[:nInformative], "Incorrect subset of genes in informative grouping")
+        self.assertAllTrue(onlyInformative==allGenes.iloc[:nInformative,:], "Values for informative genes do not match across informative / all-genes groups")
+        self.assertAllTrue(onlyInformative.loc[:,'Informative']==1, "Non-informative genes included in informative-only group")
+        self.assertAllTrue(allGenes.loc[:,'Informative'][nInformative:]==0, "Informative genes included in non-informative section")
         informative = allGenes.loc[:,'Gain']>allGenes.loc[:,'MDLP-Criterion']
-        self.assertTrue(np.alltrue(informative==allGenes.loc[:,'Informative']), "Gain vs MDLP-criterion does not match marking as informative")
+        self.assertAllTrue(informative==allGenes.loc[:,'Informative'], "Gain vs MDLP-criterion does not match marking as informative")
 
     def test_cuffnorm_multiclass_analysis(self):
         path = self._testFilePath('genes.count_table')
@@ -45,8 +46,8 @@ class WorflowsTester(unittest.TestCase):
             mul = output['CuffnormMultiClassCompare']
             one = output['CuffnormOneVsRest']
 
-            self.assertTrue(np.alltrue(mul[0]==one), "Data re informative genes does not match between multi-class and one-vs-rest approaches")
-            self.assertTrue(np.alltrue(mul[0].index==one.index), "Ranking of genes does not match between multi-class and one-vs-rest approaches")
+            self.assertAllTrue(mul[0]==one, "Data re informative genes does not match between multi-class and one-vs-rest approaches")
+            self.assertAllTrue(mul[0].index==one.index, "Ranking of genes does not match between multi-class and one-vs-rest approaches")
             self.assertEqual(len(mul.keys()), 4, "Multi-class informative gene analysis returns incorrect number of analyses for number of classes")
 
     def test_multiclass_to_onevsrest_class_conversion(self):
@@ -60,7 +61,7 @@ class WorflowsTester(unittest.TestCase):
         for trueClass, output in enumerate(expected):
             self.assertEqual(len(output), len(multiClasses), "Test vector for trueClass=%d has incorrect number of expected binary classes" % trueClass)
             binaryClasses = workflows.PandasMultiClassCompare._getBinaryClasses(multiClasses, trueClass)
-            self.assertTrue(np.alltrue(output==binaryClasses), "Multi-class analyses do not properly convert to binary classes for trueClass=%d" % trueClass)
+            self.assertAllTrue(output==binaryClasses, "Multi-class analyses do not properly convert to binary classes for trueClass=%d" % trueClass)
 
 if __name__=='__main__':
     unittest.main()
