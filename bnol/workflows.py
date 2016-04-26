@@ -1,4 +1,6 @@
-import numpy as np, pandas as pd
+import sys
+import numpy as np, pandas as pd, grequests, shelve
+from collections import deque
 from . import information
 
 class PandasOneVsRest(object):
@@ -78,3 +80,51 @@ class CuffnormOneVsRest(PandasOneVsRest):
     def __init__(self, cuffnormOutputPath, binaryClasses):
         specimens = pd.read_csv(cuffnormOutputPath, delimiter='\t', index_col=0).T
         super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
+
+ensemblFormats = set(['full', 'condensed'])
+def EnsemblLookup(ensemblIDs, lookupFormat='full', rebuildCache=False):
+    """Use the Ensembl REST API 'lookup' to return data corresponding to a particular ID. Will create a local cache.
+
+    http://rest.ensembl.org/documentation/info/lookup
+
+    Args:
+        ensemblIDs (list or string): Ensembl IDs in a list; will accept a string.
+        lookupFormat (string): One of 'full' or 'condensed' as described in the API documentation.
+        rebuildCache (bool): If True, fetch fresh data from Ensembl even if a locally-cached version exists.
+
+    Returns:
+        list or dict: The JSON data returned by the API, converted to a dict. Will return a single dict if string ID passed.
+
+    Raises:
+        Exception: if an invalid format string is passed.
+    """
+    if not lookupFormat in ensemblFormats:
+        raise Exception("Ensembl lookup can only be 'full' or 'condsensed'")
+
+    if isinstance(ensemblIDs, str):
+        ensemblIDs = [ensemblIDs]
+        returnAsList = False
+    else:
+        returnAsList = True
+        ensemblIDs = ensemblIDs
+
+    memo = shelve.open("./.ensemblCache-%d" % sys.version_info[0]) # technically don't need different file names, but local automated testing fails when using python3 to open python2 shelves
+
+    noneType = type(None)
+    getFresh = [rebuildCache or (not idx in memo) or isinstance(memo[idx], noneType) for idx in ensemblIDs]
+    urls = ["https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=%s" % (idx, lookupFormat) for (i, idx) in enumerate(ensemblIDs) if getFresh[i]]
+    rs = (grequests.get(u) for u in urls)
+    freshData = deque(grequests.map(rs))
+
+    data = []
+    for i, idx in enumerate(ensemblIDs):
+        if getFresh[i]:
+            memo[idx] = freshData.popleft() # freshData queue is only populated with those we know are not in the memo (or all if rebuildCache)
+        data.append(memo[idx])
+
+    memo.close()
+
+    if returnAsList:
+        return [d.json() for d in data]
+    else:
+        return data[0].json()
