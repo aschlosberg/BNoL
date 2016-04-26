@@ -82,13 +82,13 @@ class CuffnormOneVsRest(PandasOneVsRest):
         super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
 
 ensemblFormats = set(['full', 'condensed'])
-def EnsemblLookup(ids, lookupFormat='full', rebuildCache=False):
+def EnsemblLookup(ensemblIDs, lookupFormat='full', rebuildCache=False):
     """Use the Ensembl REST API 'lookup' to return data corresponding to a particular ID. Will create a local cache.
 
     http://rest.ensembl.org/documentation/info/lookup
 
     Args:
-        ids (list or string): Ensembl IDs in a list; will accept a string.
+        ensemblIDs (list or string): Ensembl IDs in a list; will accept a string.
         lookupFormat (string): One of 'full' or 'condensed' as described in the API documentation.
         rebuildCache (bool): If True, fetch fresh data from Ensembl even if a locally-cached version exists.
 
@@ -101,23 +101,26 @@ def EnsemblLookup(ids, lookupFormat='full', rebuildCache=False):
     if not lookupFormat in ensemblFormats:
         raise Exception("Ensembl lookup can only be 'full' or 'condsensed'")
 
-    if isinstance(ids, str):
-        ids = [ids]
+    if isinstance(ensemblIDs, str):
+        ensemblIDs = [ensemblIDs]
         returnAsList = False
     else:
         returnAsList = True
+        ensemblIDs = ensemblIDs
 
     memo = shelve.open("./.ensemblCache-%d" % sys.version_info[0]) # technically don't need different file names, but local automated testing fails when using python3 to open python2 shelves
 
-    urls = ["https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=%s" % (i, lookupFormat) for i in ids if rebuildCache or (not i in memo)]
+    noneType = type(None)
+    getFresh = [rebuildCache or (not idx in memo) or isinstance(memo[idx], noneType) for idx in ensemblIDs]
+    urls = ["https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=%s" % (idx, lookupFormat) for (i, idx) in enumerate(ensemblIDs) if getFresh[i]]
     rs = (grequests.get(u) for u in urls)
     freshData = deque(grequests.map(rs))
 
     data = []
-    for i in ids:
-        if rebuildCache or (not i in memo):
-            memo[i] = freshData.popleft() # freshData queue is only populated with those we know are not in the memo (or all if rebuildCache)
-        data.append(memo[i])
+    for i, idx in enumerate(ensemblIDs):
+        if getFresh[i]:
+            memo[idx] = freshData.popleft() # freshData queue is only populated with those we know are not in the memo (or all if rebuildCache)
+        data.append(memo[idx])
 
     memo.close()
 
