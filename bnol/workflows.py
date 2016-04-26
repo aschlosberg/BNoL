@@ -81,7 +81,7 @@ class CuffnormOneVsRest(PandasOneVsRest):
         specimens = pd.read_csv(cuffnormOutputPath, delimiter='\t', index_col=0).T
         super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
 
-ensemblFormats = set(['full', 'condensed'])
+ensemblFormats = {'full', 'condensed'} # set {} has faster lookup than list []
 def EnsemblLookup(ensemblIDs, lookupFormat='full', rebuildCache=False):
     """Use the Ensembl REST API 'lookup' to return data corresponding to a particular ID. Will create a local cache.
 
@@ -110,8 +110,7 @@ def EnsemblLookup(ensemblIDs, lookupFormat='full', rebuildCache=False):
 
     memo = shelve.open("./.ensemblCache-%d" % sys.version_info[0]) # technically don't need different file names, but local automated testing fails when using python3 to open python2 shelves
 
-    noneType = type(None)
-    getFresh = [rebuildCache or (not idx in memo) or isinstance(memo[idx], noneType) for idx in ensemblIDs]
+    getFresh = [rebuildCache or (not idx in memo) or (memo[idx] is None) for idx in ensemblIDs]
     urls = ["https://rest.ensembl.org/lookup/id/%s?content-type=application/json;format=%s" % (idx, lookupFormat) for (i, idx) in enumerate(ensemblIDs) if getFresh[i]]
     rs = (grequests.get(u) for u in urls)
     freshData = deque(grequests.map(rs))

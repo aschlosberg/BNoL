@@ -18,7 +18,7 @@ class WorflowsTester(unittest.TestCase):
         allGenes = analysis.informativeGenes(allGenes=True)
 
         nInformative = len(onlyInformative.index)
-        ranking = list(map(lambda g: 'GENE_'+g, ['F','D','G','C','I','H','E','A','B']))
+        ranking = ["GENE_%s" % g for g in ['F','D','G','C','I','H','E','A','B']]
 
         self.assertTrue(np.alltrue(allGenes.index==ranking), "Incorrect ranking of genes by entropy gain")
         self.assertTrue(np.alltrue(onlyInformative.index==allGenes.index[:nInformative]), "Incorrect subset of genes in informative grouping")

@@ -209,7 +209,7 @@ class Discretize:
 
         featureDecisions = pool.map(ParallelFeatureDiscretization, tupleArguments) # use a map so it can later be parallelised
         decisionTuples = zip(*featureDecisions)
-        (self.includeFeatures, self.bestThresholds, self.discretizedFeatures, self.gains, self.mdlpCriteria) = map(lambda t: np.asarray(t).T, decisionTuples)
+        (self.includeFeatures, self.bestThresholds, self.discretizedFeatures, self.gains, self.mdlpCriteria) = (np.asarray(t).T for t in decisionTuples)
 
     def transform(self, distributions, allFeatures=False):
         """Not yet implemented.
@@ -242,7 +242,7 @@ class Discretize:
         assert bestSeparation.dtype=='bool', "Expecting boolean class values when calculating delta value."
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."
 
-        classCounts = list(map(lambda s: len(np.unique(booleanClasses[s])), [bestSeparation, ~bestSeparation]))
+        classCounts = [len(np.unique(booleanClasses[s])) for s in [bestSeparation, ~bestSeparation]]
         k = 2 # see Fayyad and Irani: class count prior to separation
         return np.log2(3**k - 2) - (k*baseEntropy - np.dot(classCounts, bestSeparationEntropies))
 
