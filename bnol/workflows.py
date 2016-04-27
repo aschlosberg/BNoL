@@ -1,7 +1,6 @@
 import sys
 import numpy as np, pandas as pd, grequests, shelve
 import logging
-logging.basicConfig(level=logging.DEBUG)
 from collections import deque
 from . import information
 
