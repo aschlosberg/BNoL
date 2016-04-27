@@ -1,5 +1,7 @@
 import sys
 import numpy as np, pandas as pd, grequests, shelve
+import logging
+logging.basicConfig(level=logging.DEBUG)
 from collections import deque
 from . import information
 
@@ -25,6 +27,7 @@ class PandasOneVsRest(object):
         self.genes = specimens.columns.values
         self.specimenLabels = specimens.index
         self.Discrete = information.Discretize()
+        logging.debug("PandasOneVsRest initialized successfully")
 
     def _classOverExpressionRatio(self, discretizedFeatures, booleanClasses):
         """Convenience wrapper for the mean number of times that each gene is over-expressed, i.e. marked True, in the subset of genes passed defined by booleanClasses==True."""
@@ -43,7 +46,9 @@ class PandasOneVsRest(object):
             pandas.DataFrame: details regarding genes, ranked in descending order of amount for which entropy gain exceeds MDLP criterion.
         """
         D = self.Discrete # convenience
+        logging.debug("Starting feature discretization in PandasOneVsRest")
         D.fit(self.specimens, self.binaryClasses)
+        logging.debug("Finished feature discretization in PandasOneVsRest")
 
         # determine a set of gene indices, ranked by decreasing entropy gain above MDLP criterion for said genes
         # the approach is not optimal in that we sort all p genes and then take a subset rather than taking the subset first
@@ -58,6 +63,7 @@ class PandasOneVsRest(object):
         assert overExpression[0].shape==(len(rankedGeneIndices),), "Calculated over-expression ratio along incorrect axis"
         assert overExpression[0].shape==overExpression[1].shape, "Over- / under-expression ratios should have same shape"
 
+        logging.debug("Included features determined, building DataFrame in PandasOneVsRest")
         return pd.DataFrame(
             data = np.vstack((
                     D.includeFeatures[rankedGeneIndices],
@@ -77,6 +83,7 @@ class CuffnormReader(object):
     """Class to abstract conversion of cuffnorm output to Pandas DataFrame."""
     @staticmethod
     def getSpecimens(cuffnormOutputPath):
+        logging.info("Fetching cuffnorm output from: %s" % cuffnormOutputPath)
         return pd.read_csv(cuffnormOutputPath, delimiter='\t', index_col=0).T
 
 class CuffnormOneVsRest(PandasOneVsRest, CuffnormReader):
@@ -88,6 +95,7 @@ class CuffnormOneVsRest(PandasOneVsRest, CuffnormReader):
     """
     def __init__(self, cuffnormOutputPath, binaryClasses):
         specimens = self.getSpecimens(cuffnormOutputPath)
+        logging.debug("CuffnormOveVsRest handing over to parent class PandasOneVsRest")
         super(CuffnormOneVsRest, self).__init__(specimens, binaryClasses)
 
 class PandasMultiClassCompare(PandasOneVsRest):
@@ -112,9 +120,12 @@ class PandasMultiClassCompare(PandasOneVsRest):
         """
         classes = np.unique(self.multiClasses)
         allComparisons = dict()
+        logging.info("Performing multi-class comparison of %d classes in PandasMultiClassCompare" % len(classes))
         for c in classes:
+            logging.debug("Starting analysis of class: %s" % c)
             self.binaryClasses = np.asarray(self._getBinaryClasses(self.multiClasses, c))
             allComparisons[c] = super(PandasMultiClassCompare, self).informativeGenes(allGenes)
+            logging.debug("Finished analysis of class: %s" % c)
         return allComparisons
 
     @staticmethod
