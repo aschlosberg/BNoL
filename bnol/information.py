@@ -212,7 +212,7 @@ class Discretize:
         for featureIdx in range(distributions.shape[1]):
             tupleArguments.append((self.distributions[:,featureIdx], self.booleanClasses, self.baseEntropy))
         logging.debug("Mapping feature-discretization function to %d features" % len(tupleArguments))
-        featureDecisions = map(ParallelFeatureDiscretization, tupleArguments)
+        featureDecisions = pool.map(ParallelFeatureDiscretization, tupleArguments)
         logging.debug("Parallel feature discretization completed")
         pool.close()
 
