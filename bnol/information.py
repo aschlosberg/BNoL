@@ -4,6 +4,10 @@ import numpy as np
 from scipy.stats import entropy
 from . import utility
 import multiprocessing
+import logging
+
+#logger = multiprocessing.log_to_stderr()
+#logger.setLevel(multiprocessing.SUBDEBUG)
 
 def Entropy(distributions):
     """Calculate information entropy (in bits) for a set of distributions.
@@ -202,14 +206,19 @@ class Discretize:
         self.baseEntropy = self.specimenClassEntropy(self.booleanClasses)
         self.distributions = distributions
 
+        logging.info("Initializing multiprocessing pool for feature discretization")
         pool = multiprocessing.Pool()
         tupleArguments = [] # pool.map() will only allow a single argument so combine them as a tuple
         for featureIdx in range(distributions.shape[1]):
             tupleArguments.append((self.distributions[:,featureIdx], self.booleanClasses, self.baseEntropy))
+        logging.debug("Mapping feature-discretization function to %d features" % len(tupleArguments))
+        featureDecisions = map(ParallelFeatureDiscretization, tupleArguments)
+        logging.debug("Parallel feature discretization completed")
+        pool.close()
 
-        featureDecisions = pool.map(ParallelFeatureDiscretization, tupleArguments) # use a map so it can later be parallelised
         decisionTuples = zip(*featureDecisions)
         (self.includeFeatures, self.bestThresholds, self.discretizedFeatures, self.gains, self.mdlpCriteria) = (np.asarray(t).T for t in decisionTuples)
+        logging.info("Completed feature discretization")
 
     def transform(self, distributions, allFeatures=False):
         """Not yet implemented.
