@@ -106,7 +106,7 @@ class InformationTester(NumpyfiedTestCase):
         for i, t in enumerate(tests):
             above = np.asarray(t[0], dtype='bool')
             separations = [classes[a] for a in [above, ~above]]
-            entropies = [D.specimenClassEntropy(s) for s in separations]
+            entropies = [D.groupClassEntropy(s) for s in separations]
 
             for j in range(2):
                 self.assertAllTrue(separations[j]==t[1][j], "Separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
