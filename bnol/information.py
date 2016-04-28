@@ -144,7 +144,7 @@ def ParallelFeatureDiscretization(tupleArguments):
         separation = Discretize.getSeparation(feature, threshold) # boolean values indicating if each specimen surpasses the threshold for this feature
         negated = [separation, ~separation]
         n = [np.count_nonzero(s) for s in negated]
-        ent = [Discretize.groupClassEntropy(classes[s]) for s in negated]
+        ent = [Discretize.groupClassEntropy(utility.BooleanListIndexing(classes, s)) for s in negated]
         thresholdEntropy = np.dot(n, ent) / nSamples
 
         if thresholdEntropy<minEntropy:
@@ -245,7 +245,7 @@ class Discretize:
 
         # Fayyad and Irani use k for number of classes prior to separation, and k1 / k2 for number of classes in above/below threshold separations
         k = len(np.unique(classes))
-        k12 = [len(np.unique(classes[s])) for s in [bestSeparation, ~bestSeparation]]
+        k12 = [len(np.unique(utility.BooleanListIndexing(classes, s))) for s in [bestSeparation, ~bestSeparation]]
         logging.debug("Calculating MDLP delta: %d classes prior to separation and %d / %d post." % (k, k12[0], k12[1]))
         for i in range(2):
             if k12[i]==1:

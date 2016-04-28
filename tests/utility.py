@@ -45,5 +45,20 @@ class UtilityTester(NumpyfiedTestCase):
         self.assertAllTrue(matrix==matrixCopy, "Values of matrix do not match originals")
         self.assertTrue(matrix is matrixCopy, "Copy of matrix made when expecting identical object to be returned")
 
+    def test_boolean_list_indexing(self):
+        values = list(range(5))
+        vectors = [
+            ([True, True, False, False, False], [0,1]),
+            ([False, True, False, True, False], [1,3]),
+            ([True]*5, values[:]),
+            ([False]*5, []),
+            ([0,1,2,3,4], [1,2,3,4]),
+        ]
+
+        for i, (included, output) in enumerate(vectors):
+            sublist = utility.BooleanListIndexing(values, included)
+            self.assertEqual(len(sublist), len(output), "Boolean list indexing returned list of incorrect length for test vector %d" % i)
+            self.assertAllTrue(sublist==output, "Boolean list indexing returned incorrect values for test vector %d" % i)
+
 if __name__=='__main__':
     unittest.main()
