@@ -1,0 +1,8 @@
+{
+    "commands": [
+        "bnol/*.py : python2 {absPath}../tests/{filename}",
+        "bnol/*.py : python3 {absPath}../tests/{filename}",
+        "tests/*.py : python2 {absPath}{filename}",
+        "tests/*.py : python3 {absPath}{filename}"
+    ]
+}
