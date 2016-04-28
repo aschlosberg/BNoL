@@ -44,3 +44,25 @@ def VectorToMatrix(vec):
         numpy.ndarray: the original object if it was an (n,p) matrix or an expanded-dimension (1,p) vector of the single-specimen values.
     """
     return np.expand_dims(vec, axis=0) if len(vec.shape)==1 else vec
+
+def BooleanListIndexing(listVals, included=None):
+    """Mimic numpy indexing by boolean flags, i.e. return those values of listVals for which the corresponding value in included is truthy.
+
+    If include is None then return the original list.
+
+    Args:
+        listVals (list): values from which we wish to return a subset.
+        included (list): whether or not to return the corresponding value in listVals.
+
+    Returns:
+        list: numpy equivalent of listVals[included==True]
+
+    Raises:
+        Exception: if lengths of listVals and include differ.
+    """
+    if included is None:
+        return listVals
+    else:
+        if not len(listVals)==len(included):
+            raise Exception("Boolean list indexing requires identical-length lists as arguments.")
+        return [listVals[idx] for (idx, incl) in enumerate(included) if incl]

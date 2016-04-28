@@ -4,22 +4,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 
 from bnol import utility, information, data
 import unittest
+from numpyfied import NumpyfiedTestCase
 import numpy as np
 import base64
 
-class InformationTester(unittest.TestCase):
+class InformationTester(NumpyfiedTestCase):
 
     def test_entropy_calculation(self):
         freqs = data.BerrettaExpression()
         berrettaEntropy = information.Entropy(freqs)
 
         self.assertEqual(berrettaEntropy.shape, (freqs.shape[0],), "Specimen entropies calculated across incorrect axis")
-        self.assertTrue(np.isclose(berrettaEntropy[0], berrettaEntropy[1], data.epsilon()), "Permutations of the same distribution should have the same entropy")
+        self.assertIsClose(berrettaEntropy[0], berrettaEntropy[1], "Permutations of the same distribution should have the same entropy")
         self.assertEqual(np.argmax(berrettaEntropy), freqs.shape[0]-1, "Uniform distribution should have the maximum possible entropy")
 
         for n in range(1,25):
             uniform = utility.DiscreteUniform(n)
-            self.assertTrue(np.isclose(information.Entropy(uniform), np.log2(n), data.epsilon()), "Incorrect entropy of discrete uniform distribution for n=%d" % n)
+            self.assertIsClose(information.Entropy(uniform), np.log2(n), "Incorrect entropy of discrete uniform distribution for n=%d" % n)
 
     def test_divergence_from_uniform_distribution(self):
         freqs = data.BerrettaExpression()
@@ -35,7 +36,7 @@ class InformationTester(unittest.TestCase):
 
         complexity = information.Complexity(freqs, utility.DiscreteUniform(freqs.shape[1]))
         self.assertEqual(len(complexity), freqs.shape[0], "Complexity calculated across incorrect axis")
-        self.assertTrue(np.isclose(complexity[0], complexity[1], data.epsilon()), "Complexity of permutations should be the same when compared to uniform reference")
+        self.assertIsClose(complexity[0], complexity[1], "Complexity of permutations should be the same when compared to uniform reference")
         self.assertEqual(complexity[-1], 0, "Complexity should be zero when compared to self")
 
     def test_discretization_of_continuous_features(self):
@@ -45,24 +46,24 @@ class InformationTester(unittest.TestCase):
         D = information.Discretize()
         mdlpCriterionMet = D.fit_transform(freqs, np.asarray([True, False, True, False]), allFeatures=False)
 
-        self.assertTrue(np.alltrue(D.getSeparation(np.arange(1,6), 3)==[False, False, False, True, True]), "Discretization does not properly threshold feature values. MUST be > and not >=.")
+        self.assertAllTrue(D.getSeparation(np.arange(1,6), 3)==[False, False, False, True, True], "Discretization does not properly threshold feature values. MUST be > and not >=.")
         self.assertEqual(D.includeFeatures.dtype, 'bool', "Feature-inclusion array dtype incorrectly defined for discretization by MDLP")
         self.assertEqual(D.includeFeatures.shape, (nFeatures,), "Feature-inclusion array shape incorrectly defined for discretization by MDLP")
-        self.assertTrue(np.alltrue(D.includeFeatures==(D.gains>D.mdlpCriteria)), "Feature-inclusion array does not match that determined by comparing gains array to MDLP criteria array")
+        self.assertAllTrue(D.includeFeatures==(D.gains>D.mdlpCriteria), "Feature-inclusion array does not match that determined by comparing gains array to MDLP criteria array")
         self.assertEqual(D.bestThresholds.dtype, 'float', "Threshold array dtype incorrectly defined for discretization by MDLP")
         self.assertEqual(D.bestThresholds.shape, (nFeatures,), "Threshold array properties shape incorrectly defined for discretization by MDLP")
         self.assertEqual(D.discretizedFeatures.dtype, 'bool', "Discretized-features array dtype incorrectly defined for discretization by MDLP")
         self.assertEqual(D.discretizedFeatures.shape, freqs.shape, "Discretized-features array shape incorrectly defined for discretization by MDLP")
-        self.assertTrue(np.alltrue(mdlpCriterionMet==D.discretizedFeatures[:,D.includeFeatures]), "Features returned by Discretize.fit_transform() do not match those chosen explicitly with Discretize.includeFeatures")
+        self.assertAllTrue(mdlpCriterionMet==D.discretizedFeatures[:,D.includeFeatures], "Features returned by Discretize.fit_transform() do not match those chosen explicitly with Discretize.includeFeatures")
 
-        self.assertTrue(np.alltrue(D.bestThresholds==[3.0, 1.5, 3.5, 1.5, 1.05]), "Optimal thresholds returned by Discretize.fit() are incorrect for Berretta data.")
+        self.assertAllTrue(D.bestThresholds==[3.0, 1.5, 3.5, 1.5, 1.05], "Optimal thresholds returned by Discretize.fit() are incorrect for Berretta data.")
         discretized = np.asarray([
             [1, 1, 0, 0, 0],
             [0, 0, 0, 1, 1],
             [1, 1, 1, 0, 1],
             [0, 1, 0, 1, 1]
         ], dtype='bool')
-        self.assertTrue(np.alltrue(D.discretizedFeatures==discretized), "Discretized features are incorrect for Berretta data.")
+        self.assertAllTrue(D.discretizedFeatures==discretized, "Discretized features are incorrect for Berretta data.")
 
     def test_mdlp_criterion_for_discretization(self):
         """Series of test tuples::
@@ -105,12 +106,12 @@ class InformationTester(unittest.TestCase):
         for i, t in enumerate(tests):
             above = np.asarray(t[0], dtype='bool')
             separations = [classes[a] for a in [above, ~above]]
-            entropies = [D.specimenClassEntropy(s) for s in separations]
+            entropies = [D.groupClassEntropy(s) for s in separations]
 
             for j in range(2):
-                self.assertTrue(np.alltrue(separations[j]==t[1][j]), "Separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
-                self.assertTrue(np.isclose(entropies[j], t[2][j], data.epsilon()), "Entropies of separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
-            self.assertTrue(np.isclose(t[3], D.deltaMDLP(classes, ents[3,2], above, entropies), data.epsilon()), "Incorrect delta value for MDLP criterion; test [%d] %s" % (i, t[0]))
+                self.assertAllTrue(separations[j]==t[1][j], "Separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
+                self.assertIsClose(entropies[j], t[2][j], "Entropies of separation of boolean classes incorrectly calculated for testing of MDLP criterion; test [%d] %s" % (i, t[0]))
+            self.assertIsClose(t[3], D.deltaMDLP(classes, ents[3,2], above, entropies), "Incorrect delta value for MDLP criterion; test [%d] %s" % (i, t[0]))
 
     def test_correct_combinatorial_term_in_delta_mdlp(self):
         """Fayyad and Irani define a delta term for calculation of MDLP that includes a count of combinations (3^k - 2) where k=2 for this work. Was incorrectly implemented as (2^3 - 2)."""
@@ -138,7 +139,7 @@ class InformationTester(unittest.TestCase):
         discrete = D.discretizedFeatures
 
         self.assertEqual(discrete.shape, samples.shape, "Zero-variance feature discretization can not be checked if using Discretize.fit_transform() - must use discretizedFeatures attribute")
-        self.assertTrue(np.alltrue(discrete==True), "Zero-variance feature should be discretized to True; arbitrarily chosen") # arbitrarily decided to use True
+        self.assertAllTrue(discrete==True, "Zero-variance feature should be discretized to True; arbitrarily chosen") # arbitrarily decided to use True
         self.assertFalse(D.includeFeatures[0], "Zero-variance feature should not be included in discretized values")
         self.assertEqual(D.bestThresholds[0], 42, "Zero-variance feature should have its constant value as best threshold")
         self.assertEqual(D.gains[0], 0, "Zero-variance feature should have zero gain in entropy")
