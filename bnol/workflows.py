@@ -58,7 +58,7 @@ class PandasOneVsRest(object):
         rankedGeneIndices = list(reversed(np.argsort(gainAboveMDLP)))[:numGenesToInclude]
 
         # for each of the True- and False-classed genes, calculate the proportion of specimens that show over-expression relative to the threshold
-        overExpression = [self._classOverExpressionRatio(D.discretizedFeatures[:,rankedGeneIndices], c) for c in [D.booleanClasses, ~D.booleanClasses]]
+        overExpression = [self._classOverExpressionRatio(D.discretizedFeatures[:,rankedGeneIndices], c) for c in [D.classes, ~D.classes]]
         assert overExpression[0].shape==(len(rankedGeneIndices),), "Calculated over-expression ratio along incorrect axis"
         assert overExpression[0].shape==overExpression[1].shape, "Over- / under-expression ratios should have same shape"
 

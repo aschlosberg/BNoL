@@ -116,17 +116,17 @@ def ParallelFeatureDiscretization(tupleArguments):
     """Determine threshold value for a single feature and decide if the MDLP criterion is met.
 
     This is not a method of class information.Discretize as we require a function defined at the top of the module to allow for pickling prior to use with multiprocessing.Pool.
-    We are also limited to a single argument so the tuple is unwrapped as (feature, booleanClasses, baseEntropy).
+    We are also limited to a single argument so the tuple is unwrapped as (feature, classes, baseEntropy).
 
     Args:
-        tupleArguments (numpy.ndarray, numpy.ndarray, float): [0] feature: shape (n,1); feature values for all specimens; [1] booleanClasses: shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool'); [2] baseEntropy: entropy value pre-calculated for booleanClasses
+        tupleArguments (numpy.ndarray, numpy.ndarray, float): [0] feature: shape (n,1); feature values for all specimens; [1] classes: shape (n,) defining categorical designation of each specimen; [2] baseEntropy: entropy value pre-calculated for classes
 
     Returns:
         tuple(bool, float, numpy.ndarray, float, float): [0] for the best threshold, has the MDLP criterion been met (i.e should we include this feature); [1] best threshold; [2] for each specimen, does it exceed the best threshold; [3] entropy gain as defined in Fayyad and Irani paper; [4] MDLP criterion which entropy gain must exceed
     """
-    (feature, booleanClasses, baseEntropy) = tupleArguments
+    (feature, classes, baseEntropy) = tupleArguments
     thresholds = sorted(np.unique(feature))
-    nSamples = len(booleanClasses)
+    nSamples = len(classes)
 
     # if all values are the same then it is impossible to improve entropy so bail out early with baseEntropy + 1 as the MDLP criterion as it is impossible to reach
     if len(thresholds)==1:
@@ -141,27 +141,20 @@ def ParallelFeatureDiscretization(tupleArguments):
         This loop is O(n) if we consider its working to be constant. Can we find the optimal threshold faster? I thought that a binary partitioning O(logn) would work but the entropy is non-convex with respect to the threshold.
         The point of this function is to determine entropy-reducing ability of each feature so we can't make assumptions; thus I think O(n) is best possible as we must check every threshold.
         """
-        separation = Discretize.getSeparation(feature, threshold)
-
-        n = [None]*2
-        Ent = [None]*2
-
-        n[0] = np.count_nonzero(separation)
-        Ent[0] = Discretize.specimenClassEntropy(booleanClasses[separation])
-
-        n[1] = nSamples - n[0]
-        Ent[1] = Discretize.specimenClassEntropy(booleanClasses[~separation])
-
-        thresholdEntropy = np.dot(n, Ent) / nSamples
+        separation = Discretize.getSeparation(feature, threshold) # boolean values indicating if each specimen surpasses the threshold for this feature
+        negated = [separation, ~separation]
+        n = [np.count_nonzero(s) for s in negated]
+        ent = [Discretize.groupClassEntropy(classes[s]) for s in negated]
+        thresholdEntropy = np.dot(n, ent) / nSamples
 
         if thresholdEntropy<minEntropy:
             minEntropy = thresholdEntropy
             bestThreshold = (thresholds[t] + thresholds[t+1])/2 # note that we only enumerate up to thresholds[-1]
-            bestSeparationEntropies = Ent[:]
+            bestSeparationEntropies = ent[:]
         # used to have else: break here but I have demonstrated that the function is non-convex so this is wrong!
 
     bestSeparation = Discretize.getSeparation(feature, bestThreshold)
-    delta = Discretize.deltaMDLP(booleanClasses, baseEntropy, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
+    delta = Discretize.deltaMDLP(classes, baseEntropy, bestSeparation, bestSeparationEntropies) # see Fayyad and Irani paper
     mdlpCriterion = (np.log2(nSamples-1) + delta) / nSamples
     gain = baseEntropy - minEntropy
 
@@ -170,9 +163,9 @@ def ParallelFeatureDiscretization(tupleArguments):
 class Discretize:
     """Information-theoretic method for discrete feature selection based on Minimum Description Length Principle (MDLP).
 
-    This method additionally provides an entropy-minimising means of defining a context-dependent threshold for over- / under-expression of genes between groups. This is the (binary) discretisation step.
+    This method additionally provides an entropy-minimising means of defining a context-dependent threshold for over- / under-expression of genes across categorical designations. This is the (binary) discretisation step.
 
-    Along with gene-expression values, all specimens are labelled by class (i.e. context-dependency) such as cancer vs normal tissue, and a threshold is produced such that the entropy of classes within the groups (above and below said threshold) is minimised.
+    Along with gene-expression values, all specimens are labelled by class (i.e. context-dependency) such as cancer vs normal tissue, and a threshold is produced such that the entropy of classes within the groups (above and below said threshold) is minimised. Any number of classes (>=2) can be used.
 
     Features are only included if the reduction in entropy, compared to no separation by a threshold, is sufficiently great (the MDLP criterion).
 
@@ -183,8 +176,8 @@ class Discretize:
         bestThresholds (numpy.ndarray): float; shape(p,) optimal, entropy-minimising, threshold for each of the p features.
         discretizedFeatures (numpy.ndarray): bool; shape (n,p); whether or not each specimen-feature value exceeds the optimal threshold for said feature.
         includeFeatures (numpy.ndarray): bool; shape(p,); whether or not the optimal threshold for each feature is sufficient such that the decrease in entropy meets the MDLP criterion.
-        gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for each feature
-        mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for inclusion of each feature
+        gains (numpy.ndarray): float; shape(p,); entropy improvement based on best threshold for each feature.
+        mdlpCriteria (numpy.ndarray): float; shape(p,); minimum gain required for inclusion of each feature.
     """
     def __init__(self):
         pass
@@ -194,7 +187,7 @@ class Discretize:
 
         Args:
             distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
-            classes (numpy.ndarray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool').
+            classes (numpy.ndarray): shape (n,) defining categorical designation of each specimen.
 
         Raises:
             Exception: if number of samples is different in distributions and classes arguments.
@@ -202,17 +195,16 @@ class Discretize:
         if not len(classes)==distributions.shape[0]:
             raise Exception("Number of class indicators for descritization must equal number of samples provided.")
 
-        self.booleanClasses = classes.astype('bool')
-        self.baseEntropy = self.specimenClassEntropy(self.booleanClasses)
+        self.classes = classes
+        self.baseEntropy = self.groupClassEntropy(self.classes)
         self.distributions = distributions
 
         logging.info("Initializing multiprocessing pool for feature discretization")
         pool = multiprocessing.Pool()
-        tupleArguments = [] # pool.map() will only allow a single argument so combine them as a tuple
-        for featureIdx in range(distributions.shape[1]):
-            tupleArguments.append((self.distributions[:,featureIdx], self.booleanClasses, self.baseEntropy))
-        logging.debug("Mapping feature-discretization function to %d features" % len(tupleArguments))
-        featureDecisions = pool.map(ParallelFeatureDiscretization, tupleArguments)
+        # pool.map() will only allow a single argument so combine them as a tuple
+        mappingArguments = [(self.distributions[:,featureIdx], self.classes, self.baseEntropy) for featureIdx in range(distributions.shape[1])]
+        logging.debug("Mapping feature-discretization function to %d features" % len(mappingArguments))
+        featureDecisions = pool.map(ParallelFeatureDiscretization, mappingArguments)
         logging.debug("Parallel feature discretization completed")
         pool.close()
 
@@ -236,7 +228,7 @@ class Discretize:
 
         Args:
             distributions (numpy.ndarray): shape (n,p) defining the relative frequencies of features in the n specimens.
-            classes (numpy.ndarray): shape (n,) defining which of the two classes each specimen belongs to; values will be cast with numpy.ndarray.astype('bool').
+            classes (numpy.ndarray): shape (n,) defining categorical designation of each specimen.
             allFeatures (bool): if False will exclude those features for which the MDLP criterion was not met.
 
         Returns:
@@ -246,14 +238,19 @@ class Discretize:
         return self.discretizedFeatures if allFeatures else self.discretizedFeatures[:,self.includeFeatures]
 
     @staticmethod
-    def deltaMDLP(booleanClasses, baseEntropy, bestSeparation, bestSeparationEntropies):
+    def deltaMDLP(classes, baseEntropy, bestSeparation, bestSeparationEntropies):
         """Calculate the delta value for a particular feature, as defined in Fayyad and Irani paper for calculating MDLP criterion."""
-        assert bestSeparation.dtype=='bool', "Expecting boolean class values when calculating delta value."
+        assert bestSeparation.dtype=='bool', "Expecting boolean separation values when calculating delta value."
         assert len(bestSeparationEntropies)==2, "Only two separations can be used for calculating MDLP criterion."
 
-        classCounts = [len(np.unique(booleanClasses[s])) for s in [bestSeparation, ~bestSeparation]]
-        k = 2 # see Fayyad and Irani: class count prior to separation
-        return np.log2(3**k - 2) - (k*baseEntropy - np.dot(classCounts, bestSeparationEntropies))
+        # Fayyad and Irani use k for number of classes prior to separation, and k1 / k2 for number of classes in above/below threshold separations
+        k = len(np.unique(classes))
+        k12 = [len(np.unique(classes[s])) for s in [bestSeparation, ~bestSeparation]]
+        logging.debug("Calculating MDLP delta: %d classes prior to separation and %d / %d post." % (k, k12[0], k12[1]))
+        for i in range(2):
+            if k12[i]==1:
+                assert bestSeparationEntropies[i]==0, "Separation with only one class must have zero entropy"
+        return np.log2(3**k - 2) - (k*baseEntropy - np.dot(k12, bestSeparationEntropies))
 
     @staticmethod
     def getSeparation(feature, threshold):
@@ -269,10 +266,7 @@ class Discretize:
         return feature>threshold
 
     @staticmethod
-    def specimenClassEntropy(booleanClasses):
+    def groupClassEntropy(classes):
         """Calculate the entropy of classes a group of specimens. Note that this may be the full set of features or separations based on a threshold."""
-        assert booleanClasses.dtype=='bool', "Expecting boolean class values when calculating entropy."
-        frequencies = np.zeros(2)
-        frequencies[0] = np.count_nonzero(booleanClasses)
-        frequencies[1] = len(booleanClasses) - frequencies[0]
-        return Entropy(frequencies)
+        (__, freq) = np.unique(classes, return_counts=True)
+        return Entropy(freq)
