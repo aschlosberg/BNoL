@@ -112,7 +112,7 @@ def Complexity(distributions, reference=None):
     D = Divergence(P=reference, Qs=distributions)
     return np.multiply(E, D.JS()) # element-wise multiplication
 
-def ParallelFeatureDiscretization(tupleArguments):
+def _ParallelFeatureDiscretization(tupleArguments):
     """Determine threshold value for a single feature and decide if the MDLP criterion is met.
 
     This is not a method of class information.Discretize as we require a function defined at the top of the module to allow for pickling prior to use with multiprocessing.Pool.
@@ -204,7 +204,7 @@ class Discretize:
         # pool.map() will only allow a single argument so combine them as a tuple
         mappingArguments = [(self.distributions[:,featureIdx], self.classes, self.baseEntropy) for featureIdx in range(distributions.shape[1])]
         logging.debug("Mapping feature-discretization function to %d features" % len(mappingArguments))
-        featureDecisions = pool.map(ParallelFeatureDiscretization, mappingArguments)
+        featureDecisions = pool.map(_ParallelFeatureDiscretization, mappingArguments)
         logging.debug("Parallel feature discretization completed")
         pool.close()
 
