@@ -53,7 +53,6 @@ Compatibility
 Continuous integration is performed against the following versions of Python (`See BNoL testing results <https://travis-ci.org/aschlosberg/BNoL>`_):
 
 - 2.7
-- 3.3
 - 3.4
 - 3.5
 
