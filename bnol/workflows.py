@@ -190,7 +190,7 @@ def EnsemblLookup(ensemblIDs, lookupFormat='full', rebuildCache=False):
     memo.close()
 
     def returnValue(d):
-        return d.json() if d is not None else dict()
+        return d.json() if (d is not None and d.status_code==200) else dict()
 
     if returnAsList:
         return [returnValue(d) for d in data]
